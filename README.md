@@ -1,4 +1,4 @@
-# Chatbot TTHC — Hệ thống Trợ lý ảo AI tra cứu Thủ tục Hành chính công
+# Chatbot_TTHC — Hệ thống Trợ lý ảo AI tra cứu Thủ tục Hành chính công
 
 **Thực tập sinh:** Nguyễn Quốc Tường  
 **Mentor:** Đỗ Quốc Việt  
