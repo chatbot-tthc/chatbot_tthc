@@ -22,10 +22,13 @@ class Settings(BaseSettings):
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
-    # Gemini
+    # Gemini (chỉ dùng cho LLM sinh câu trả lời)
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-flash"
-    GEMINI_EMBEDDING_MODEL: str = "models/text-embedding-004"
+
+    # Embedding model (local, chạy bằng sentence-transformers)
+    EMBEDDING_MODEL: str = "intfloat/multilingual-e5-base"
+    EMBEDDING_DIM: int = 768
 
     # ChromaDB
     CHROMA_HOST: str = "localhost"

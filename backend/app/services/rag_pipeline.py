@@ -4,10 +4,14 @@ Luồng: Embed → Retrieve (ChromaDB) → Reranker → Fallback Handler → Gem
 """
 import google.generativeai as genai
 import chromadb
+from sentence_transformers import SentenceTransformer
 from app.core.config import settings
 
-# Cấu hình Gemini
+# Cấu hình Gemini (chỉ dùng cho LLM sinh câu trả lời)
 genai.configure(api_key=settings.GEMINI_API_KEY)
+
+# Model embedding local — load 1 lần khi import module
+embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
 
 
 FALLBACK_MESSAGE = (
@@ -43,13 +47,11 @@ class RAGPipeline:
         return self._collection
 
     def _embed_query(self, text: str) -> list[float]:
-        """Chuyển câu hỏi thành vector bằng Gemini Embedding"""
-        result = genai.embed_content(
-            model=settings.GEMINI_EMBEDDING_MODEL,
-            content=text,
-            task_type="retrieval_query",
-        )
-        return result["embedding"]
+        """Chuyển câu hỏi thành vector bằng model embedding local"""
+        return embedding_model.encode(
+            f"query: {text}",
+            normalize_embeddings=True,
+        ).tolist()
 
     def _retrieve(self, query_embedding: list[float]) -> dict:
         """Tìm kiếm ngữ nghĩa Top-K chunks từ ChromaDB"""
@@ -154,3 +156,6 @@ class RAGPipeline:
             "scores": top_scores,
             "retrieved_chunks": retrieved_chunks,
         }
+    
+
+    
