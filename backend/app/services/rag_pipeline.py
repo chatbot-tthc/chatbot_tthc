@@ -2,9 +2,12 @@
 RAG Pipeline — A3
 Luồng: Embed → Retrieve (ChromaDB) → Reranker → Fallback Handler → Gemini Pro
 """
+
 import google.generativeai as genai
 import chromadb
-from sentence_transformers import SentenceTransformer
+import pdfplumber
+from pathlib import Path
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.core.config import settings
 
 # Cấu hình Gemini (chỉ dùng cho LLM sinh câu trả lời)
@@ -12,6 +15,12 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 
 # Model embedding local — load 1 lần khi import module
 embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
+
+# Model reranker (cross-encoder) — load 1 lần khi import module
+reranker_model = CrossEncoder(settings.RERANKER_MODEL, max_length=512)
+
+# Thư mục chứa PDF gốc (mount read-only từ scripts/crawler/data/pdf — A3.4)
+PDF_DIR = Path(settings.PDF_DIR)
 
 
 FALLBACK_MESSAGE = (
@@ -24,7 +33,8 @@ SYSTEM_PROMPT = """Bạn là trợ lý ảo hỗ trợ tra cứu thủ tục hà
 Hãy trả lời câu hỏi của người dùng DỰA HOÀN TOÀN vào các tài liệu được cung cấp.
 Nếu tài liệu không đủ thông tin, hãy nói rõ điều đó.
 Trả lời bằng tiếng Việt, rõ ràng, có cấu trúc.
-Luôn trích dẫn tên thủ tục và số quyết định nếu có."""
+Luôn trích dẫn tên thủ tục và số quyết định (nếu có) khi trả lời.
+Phần "TÀI LIỆU PDF GỐC" chứa nội dung đầy đủ, chính thức nhất của thủ tục — ưu tiên dùng phần này để xác minh số quyết định, thời hạn, và các chi tiết cụ thể."""
 
 
 class RAGPipeline:
@@ -63,16 +73,41 @@ class RAGPipeline:
         )
         return results
 
-    def _rerank(self, query: str, chunks: list[str], scores: list[float]) -> list[tuple]:
+    def _rerank(self, query: str, chunks: list[str]) -> list[tuple]:
         """
-        Reranker: chọn Top-N chunk liên quan nhất.
-        Hiện dùng distance score từ ChromaDB (cosine).
-        TODO: Thay bằng cross-encoder model để chính xác hơn.
+        Reranker: dùng Cross-Encoder (BAAI/bge-reranker-base) để re-score
+        lại các chunk theo độ liên quan thực sự với câu hỏi.
+        Trả về list (chunk, ce_score, original_index), sắp xếp giảm dần
+        theo ce_score (điểm càng cao = càng liên quan), lấy Top-N.
         """
-        combined = list(zip(chunks, scores))
-        # Sắp xếp theo score (distance nhỏ = liên quan hơn)
-        combined.sort(key=lambda x: x[1])
-        return combined[:settings.RERANKER_TOP_N]
+        if not chunks:
+            return []
+        pairs = [[query, chunk] for chunk in chunks]
+        ce_scores = reranker_model.predict(pairs)
+        combined = [
+            (chunk, float(score), idx)
+            for idx, (chunk, score) in enumerate(zip(chunks, ce_scores))
+        ]
+        combined.sort(key=lambda x: x[1], reverse=True)
+        return combined[: settings.RERANKER_TOP_N]
+
+    def _extract_pdf_text(self, ma_thu_tuc: str, bo_nganh: str) -> str:
+        """Đọc nội dung PDF gốc của thủ tục (nếu có), cắt theo PDF_MAX_CHARS."""
+        if not ma_thu_tuc or not bo_nganh:
+            return ""
+        pdf_path = PDF_DIR / bo_nganh / f"{ma_thu_tuc}.pdf"
+        if not pdf_path.exists():
+            return ""
+        try:
+            text_parts = []
+            with pdfplumber.open(pdf_path) as pdf:
+                for page in pdf.pages:
+                    text_parts.append(page.extract_text() or "")
+            full_text = "\n".join(text_parts).strip()
+            return full_text[: settings.PDF_MAX_CHARS]
+        except Exception as e:
+            print(f"Lỗi đọc PDF {pdf_path}: {e}")
+            return ""
 
     def _check_fallback(self, scores: list[float]) -> bool:
         """Kiểm tra xem kết quả có đủ độ tin cậy không"""
@@ -83,15 +118,28 @@ class RAGPipeline:
         best_score = min(scores)
         return best_score > (1 - settings.SIMILARITY_THRESHOLD)
 
-    def _build_prompt(self, question: str, chunks: list[str]) -> str:
-        """Ghép tài liệu và câu hỏi thành prompt hoàn chỉnh"""
+    def _build_prompt(
+        self, question: str, chunks: list[str], pdf_docs: list[dict]
+    ) -> str:
+        """Ghép tài liệu (chunk), tài liệu PDF gốc và câu hỏi thành prompt hoàn chỉnh"""
         context = "\n\n---\n\n".join(
             [f"Tài liệu {i+1}:\n{chunk}" for i, chunk in enumerate(chunks)]
         )
+
+        pdf_context = ""
+        if pdf_docs:
+            pdf_blocks = "\n\n---\n\n".join(
+                [f"PDF - {doc['ten_thu_tuc']}:\n{doc['text']}" for doc in pdf_docs]
+            )
+            pdf_context = f"""
+
+=== TÀI LIỆU PDF GỐC ===
+{pdf_blocks}"""
+
         return f"""{SYSTEM_PROMPT}
 
 === TÀI LIỆU THAM KHẢO ===
-{context}
+{context}{pdf_context}
 
 === CÂU HỎI ===
 {question}
@@ -126,13 +174,27 @@ class RAGPipeline:
                 "retrieved_chunks": [],
             }
 
-        # Bước 3: Rerank
-        reranked = self._rerank(question, chunks, distances)
-        top_chunks = [c for c, _ in reranked]
-        top_scores = [s for _, s in reranked]
+        # Bước 3: Rerank (Cross-Encoder)
+        reranked = self._rerank(question, chunks)
+        top_chunks = [c for c, _, _ in reranked]
+        top_scores = [s for _, s, _ in reranked]
+
+        # Bước 3b: Lấy nội dung PDF gốc cho các thủ tục liên quan (A3.4)
+        pdf_docs = []
+        seen_ma = set()
+        for _, _, orig_idx in reranked:
+            meta = metadatas[orig_idx] if orig_idx < len(metadatas) else {}
+            ma = meta.get("ma_thu_tuc", "")
+            bo_nganh = meta.get("bo_nganh", "")
+            ten = meta.get("ten_thu_tuc", "")
+            if ma and ma not in seen_ma:
+                seen_ma.add(ma)
+                pdf_text = self._extract_pdf_text(ma, bo_nganh)
+                if pdf_text:
+                    pdf_docs.append({"ten_thu_tuc": ten, "text": pdf_text})
 
         # Bước 4: Build Prompt
-        prompt = self._build_prompt(question, top_chunks)
+        prompt = self._build_prompt(question, top_chunks, pdf_docs)
 
         # Bước 5: Gemini sinh câu trả lời
         response = self.llm.generate_content(prompt)
@@ -140,14 +202,16 @@ class RAGPipeline:
 
         # Format retrieved_chunks cho response
         retrieved_chunks = []
-        for i, (chunk, score) in enumerate(reranked):
-            meta = metadatas[i] if i < len(metadatas) else {}
-            retrieved_chunks.append({
-                "content": chunk[:200] + "..." if len(chunk) > 200 else chunk,
-                "document_title": meta.get("title", ""),
-                "ma_thu_tuc": meta.get("ma_thu_tuc", ""),
-                "score": round(1 - score, 4),
-            })
+        for chunk, score, orig_idx in reranked:
+            meta = metadatas[orig_idx] if orig_idx < len(metadatas) else {}
+            retrieved_chunks.append(
+                {
+                    "content": chunk[:200] + "..." if len(chunk) > 200 else chunk,
+                    "document_title": meta.get("ten_thu_tuc", ""),
+                    "ma_thu_tuc": meta.get("ma_thu_tuc", ""),
+                    "score": round(score, 4),
+                }
+            )
 
         return {
             "answer": answer,
@@ -156,6 +220,3 @@ class RAGPipeline:
             "scores": top_scores,
             "retrieved_chunks": retrieved_chunks,
         }
-    
-
-    
