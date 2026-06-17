@@ -67,7 +67,7 @@ async def chat(
         session_id=session_id,
         role="assistant",
         content=result["answer"],
-        retrieved_chunks=result.get("chunks"),
+        retrieved_chunks=result.get("retrieved_chunks"),
         similarity_scores=result.get("scores"),
         is_fallback=result.get("is_fallback", False),
         response_time_ms=response_time,

@@ -12,7 +12,6 @@ import {
   Settings,
   Sun,
   Moon,
-  Check,
   LayoutDashboard,
   Info,
   X,
@@ -20,55 +19,19 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const THEME_PRESETS = {
-  "blue-purple": {
-    name: "Xanh - Tím",
-    swatch: "from-blue-600 to-purple-600",
-    bgLight: "from-blue-50 via-indigo-50 to-purple-50",
-    bgDark: "dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950",
-    header: "from-blue-600 via-indigo-600 to-purple-600",
-    avatar: "from-blue-500 to-purple-600",
-    userBubble: "from-blue-600 to-indigo-600",
-    sendBtn: "from-blue-600 to-indigo-600",
-    ring: "focus:ring-blue-500",
-    accentText: "text-blue-600 dark:text-blue-400",
-    suggestionHover: "hover:border-blue-300 hover:text-blue-600",
-    citation:
-      "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-900",
-  },
-  vnpt: {
-    name: "Xanh - Đỏ (VNPT)",
-    swatch: "from-blue-700 to-red-600",
-    bgLight: "from-blue-50 via-sky-50 to-red-50",
-    bgDark: "dark:from-slate-950 dark:via-slate-900 dark:to-red-950",
-    header: "from-blue-700 via-blue-600 to-red-600",
-    avatar: "from-blue-600 to-red-600",
-    userBubble: "from-blue-700 to-red-600",
-    sendBtn: "from-blue-700 to-red-600",
-    ring: "focus:ring-red-500",
-    accentText: "text-red-600 dark:text-red-400",
-    suggestionHover: "hover:border-red-300 hover:text-red-600",
-    citation:
-      "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900",
-  },
-  "green-teal": {
-    name: "Xanh lá - Ngọc",
-    swatch: "from-emerald-600 to-teal-600",
-    bgLight: "from-emerald-50 via-teal-50 to-cyan-50",
-    bgDark: "dark:from-slate-950 dark:via-slate-900 dark:to-teal-950",
-    header: "from-emerald-600 via-teal-600 to-cyan-600",
-    avatar: "from-emerald-500 to-teal-600",
-    userBubble: "from-emerald-600 to-teal-600",
-    sendBtn: "from-emerald-600 to-teal-600",
-    ring: "focus:ring-emerald-500",
-    accentText: "text-emerald-600 dark:text-emerald-400",
-    suggestionHover: "hover:border-emerald-300 hover:text-emerald-600",
-    citation:
-      "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900",
-  },
-} as const;
-
-type ThemeKey = keyof typeof THEME_PRESETS;
+const THEME = {
+  bgLight: "from-gray-50 via-red-50 to-gray-100",
+  bgDark: "dark:from-slate-950 dark:via-slate-900 dark:to-red-950",
+  header: "from-red-700 to-red-800",
+  avatar: "from-red-600 to-red-800",
+  userBubble: "from-red-600 to-red-800",
+  sendBtn: "from-yellow-500 to-yellow-600",
+  ring: "focus:ring-red-600",
+  accentText: "text-red-700 dark:text-red-400",
+  suggestionHover: "hover:border-red-400 hover:text-red-700",
+  citation:
+    "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900",
+};
 
 interface RetrievedChunk {
   content: string;
@@ -93,20 +56,19 @@ const SUGGESTIONS = [
 ];
 
 export default function Home() {
+  const preset = THEME;
+
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
-  const [colorScheme, setColorScheme] = useState<ThemeKey>("blue-purple");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
-
-  const preset = THEME_PRESETS[colorScheme];
 
   useEffect(() => {
     const savedSession = localStorage.getItem("tthc_session_id");
@@ -130,34 +92,26 @@ export default function Home() {
       body: JSON.stringify({}),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Không thể tạo session");
+        if (!res.ok) throw new Error();
         return res.json();
       })
       .then((data) => {
         setSessionId(data.id);
         localStorage.setItem("tthc_session_id", data.id);
       })
-      .catch((err) => {
-        console.error("Lỗi tạo session:", err);
-        setError("Không thể kết nối tới server. Vui lòng kiểm tra backend đã chạy chưa.");
+      .catch(() => {
+        console.warn("Không tạo được session trước, sẽ tạo khi gửi tin nhắn.");
       });
   }, []);
 
-  // Tải cài đặt giao diện (sáng/tối + màu chủ đề) đã lưu
   useEffect(() => {
     const savedDark = localStorage.getItem("tthc_dark_mode");
-    const savedScheme = localStorage.getItem("tthc_color_scheme");
-
     if (savedDark === "true") {
       setDarkMode(true);
       document.documentElement.classList.add("dark");
     }
-    if (savedScheme && savedScheme in THEME_PRESETS) {
-      setColorScheme(savedScheme as ThemeKey);
-    }
   }, []);
 
-  // Đóng menu cài đặt khi click ra ngoài
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
@@ -179,8 +133,8 @@ export default function Home() {
   }, [messages, loading]);
 
   useEffect(() => {
-    if (sessionId && !loading) inputRef.current?.focus();
-  }, [sessionId, loading]);
+    if (!loading) inputRef.current?.focus();
+  }, [loading]);
 
   const toggleDarkMode = () => {
     const next = !darkMode;
@@ -189,14 +143,9 @@ export default function Home() {
     localStorage.setItem("tthc_dark_mode", String(next));
   };
 
-  const selectColorScheme = (key: ThemeKey) => {
-    setColorScheme(key);
-    localStorage.setItem("tthc_color_scheme", key);
-  };
-
   const sendMessage = async (presetQuestion?: string) => {
     const question = (presetQuestion ?? input).trim();
-    if (!question || !sessionId || loading) return;
+    if (!question || loading) return;
 
     setMessages((prev) => [...prev, { role: "user", content: question }]);
     setInput("");
@@ -207,14 +156,19 @@ export default function Home() {
       const res = await fetch(`${API_URL}/api/v1/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, question }),
+        body: JSON.stringify({ session_id: sessionId || null, question }),
       });
 
-      if (!res.ok) {
-        throw new Error(`Server trả về lỗi ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server trả về lỗi ${res.status}`);
 
       const data = await res.json();
+
+      if (!sessionId && data.session_id) {
+        const sid = String(data.session_id);
+        setSessionId(sid);
+        localStorage.setItem("tthc_session_id", sid);
+      }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -238,6 +192,7 @@ export default function Home() {
     localStorage.removeItem("tthc_session_id");
     localStorage.removeItem("tthc_messages");
     setMessages([]);
+    setSessionId(null);
     setError(null);
 
     fetch(`${API_URL}/api/v1/sessions`, {
@@ -250,9 +205,7 @@ export default function Home() {
         setSessionId(data.id);
         localStorage.setItem("tthc_session_id", data.id);
       })
-      .catch(() => {
-        setError("Không thể tạo session mới. Vui lòng kiểm tra backend.");
-      });
+      .catch(() => {});
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -262,15 +215,22 @@ export default function Home() {
   return (
     <div className={`min-h-screen w-full bg-gradient-to-br ${preset.bgLight} ${preset.bgDark}`}>
       <div className="flex flex-col h-screen max-w-3xl w-full mx-auto">
+
         {/* Header */}
         <header className={`bg-gradient-to-r ${preset.header} text-white px-4 sm:px-6 py-4 shadow-lg flex items-center justify-between shrink-0`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Bot className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Coat_of_arms_of_Vietnam.svg/120px-Coat_of_arms_of_Vietnam.svg.png"
+                alt="Quốc huy"
+                className="w-9 h-9 object-contain"
+              />
             </div>
             <div>
-              <h1 className="text-base sm:text-lg font-bold leading-tight">Trợ lý ảo TTHC</h1>
-              <p className="text-xs text-white/80">VNPT TP.HCM — Tra cứu thủ tục hành chính</p>
+              <h1 className="text-base sm:text-lg font-bold leading-tight tracking-wide">
+                TRỢ LÝ ẢO TTHC
+              </h1>
+              <p className="text-xs text-white/80">VNPT TP.HCM — Tra cứu thủ tục hành chính công</p>
             </div>
           </div>
 
@@ -298,7 +258,7 @@ export default function Home() {
             </button>
 
             {settingsOpen && (
-              <div className="absolute right-0 top-12 w-64 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-xl text-zinc-800 dark:text-zinc-100 overflow-hidden z-20">
+              <div className="absolute right-0 top-12 w-56 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-xl text-zinc-800 dark:text-zinc-100 overflow-hidden z-20">
                 <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
                   <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide mb-2">
                     Chế độ hiển thị
@@ -317,26 +277,6 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
-                  <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide mb-2">
-                    Màu chủ đề
-                  </p>
-                  <div className="flex items-center gap-3">
-                    {Object.entries(THEME_PRESETS).map(([key, t]) => (
-                      <button
-                        key={key}
-                        onClick={() => selectColorScheme(key as ThemeKey)}
-                        title={t.name}
-                        className={`relative w-8 h-8 rounded-full bg-gradient-to-br ${t.swatch} flex items-center justify-center ring-2 transition-all ${
-                          colorScheme === key ? "ring-zinc-400 dark:ring-zinc-300 scale-110" : "ring-transparent"
-                        }`}
-                      >
-                        {colorScheme === key && <Check className="w-4 h-4 text-white" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <Link
                   href="/dashboard"
                   onClick={() => setSettingsOpen(false)}
@@ -350,7 +290,6 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Error banner */}
         {error && (
           <div className="mx-4 mt-3 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 dark:bg-red-950/50 dark:border-red-900 dark:text-red-300 flex items-center gap-2 shrink-0">
             <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -358,12 +297,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {messages.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-center px-4">
-              <div className={`w-16 h-16 rounded-3xl bg-gradient-to-br ${preset.avatar} flex items-center justify-center shadow-lg mb-4`}>
-                <Bot className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg mb-4 border-2 border-red-100">
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Coat_of_arms_of_Vietnam.svg/120px-Coat_of_arms_of_Vietnam.svg.png"
+                  alt="Quốc huy"
+                  className="w-12 h-12 object-contain"
+                />
               </div>
               <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 mb-1">
                 Xin chào! Tôi có thể giúp gì cho bạn?
@@ -376,7 +318,7 @@ export default function Home() {
                   <button
                     key={s}
                     onClick={() => sendMessage(s)}
-                    disabled={!sessionId || loading}
+                    disabled={loading}
                     className={`text-xs sm:text-sm px-3 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm hover:shadow-md transition-all disabled:opacity-50 ${preset.suggestionHover}`}
                   >
                     {s}
@@ -389,9 +331,7 @@ export default function Home() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex items-start gap-2.5 ${
-                msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex items-start gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {msg.role === "assistant" && (
                 <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${preset.avatar} flex items-center justify-center shrink-0 shadow-sm`}>
@@ -421,26 +361,24 @@ export default function Home() {
                   </div>
                 )}
 
-                {msg.role === "assistant" &&
-                  msg.retrieved_chunks &&
-                  msg.retrieved_chunks.length > 0 &&
-                  !msg.is_fallback && (
-                    <details className="mt-2 group">
-                      <summary className={`cursor-pointer text-xs font-medium select-none ${preset.accentText}`}>
-                        Nguồn tham khảo ({msg.retrieved_chunks.length})
-                      </summary>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {msg.retrieved_chunks.map((c, j) => (
-                          <span
-                            key={j}
-                            className={`inline-flex items-center rounded-full text-[11px] px-2.5 py-1 border ${preset.citation}`}
-                          >
-                            {c.document_title || c.ma_thu_tuc} · {(c.score * 100).toFixed(0)}%
-                          </span>
-                        ))}
-                      </div>
-                    </details>
-                  )}
+                {msg.role === "assistant" && msg.retrieved_chunks && msg.retrieved_chunks.length > 0 && !msg.is_fallback && (
+                  <details className="mt-2 group">
+                    <summary className={`cursor-pointer text-xs font-medium select-none ${preset.accentText}`}>
+                      ▼ Nguồn tham khảo ({msg.retrieved_chunks.length})
+                    </summary>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {msg.retrieved_chunks.map((c, j) => (
+                        <span
+                          key={j}
+                          className={`inline-flex items-center rounded-full text-[11px] px-2.5 py-1 border ${preset.citation}`}
+                        >
+                          {c.document_title || c.ma_thu_tuc}
+                          {c.score > 0 ? ` · ${(c.score * 100).toFixed(0)}%` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </details>
+                )}
 
                 {msg.role === "assistant" && msg.response_time_ms !== undefined && (
                   <p className="mt-1.5 text-[10px] text-zinc-400 dark:text-zinc-500">
@@ -485,12 +423,12 @@ export default function Home() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Nhập câu hỏi về thủ tục hành chính..."
-              disabled={!sessionId || loading}
+              disabled={loading}
               className={`flex-1 rounded-full border border-zinc-200 dark:border-zinc-700 px-4 py-2.5 text-sm sm:text-base outline-none focus:ring-2 ${preset.ring} focus:border-transparent bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-100 transition-all`}
             />
             <button
               onClick={() => sendMessage()}
-              disabled={!sessionId || loading || !input.trim()}
+              disabled={loading || !input.trim()}
               className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br ${preset.sendBtn} text-white flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-40 disabled:shadow-none transition-all shrink-0`}
             >
               <Send className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -502,7 +440,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Popup Giới thiệu */}
       {infoOpen && (
         <div
           className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"

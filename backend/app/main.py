@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1 import health, chat
+from app.api.v1 import health, chat, stats
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -14,8 +14,8 @@ app = FastAPI(
 # CORS — cho phép Next.js frontend gọi API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -23,6 +23,7 @@ app.add_middleware(
 # Đăng ký routes
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(stats.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Root"])
