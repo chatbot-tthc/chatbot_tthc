@@ -188,7 +188,7 @@ export default function Home() {
       <div className="flex flex-col h-screen max-w-3xl w-full mx-auto">
 
         {/* Header */}
-        <header className={`bg-gradient-to-r ${preset.header} text-white px-4 sm:px-6 py-4 shadow-lg flex items-center justify-between shrink-0 relative overflow-hidden`}>
+        <header className={`bg-gradient-to-r ${preset.header} text-white px-4 sm:px-6 py-4 shadow-lg flex items-center justify-between shrink-0 relative`}>
           <div
             className="absolute inset-0 opacity-15"
             style={{ backgroundImage: "url('/bg-vietnam.jpg')", backgroundSize: "cover", backgroundPosition: "center left" }}
