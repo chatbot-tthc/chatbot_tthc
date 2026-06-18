@@ -184,8 +184,11 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen w-full bg-gradient-to-br ${preset.bgLight} ${preset.bgDark}`}>
-      <div className="flex flex-col h-screen max-w-3xl w-full mx-auto">
+    <div
+      className="min-h-screen w-full"
+      style={{ backgroundImage: "url('/bg-vietnam.jpg')", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }}
+    >
+      <div className="flex flex-col h-screen max-w-3xl w-full mx-auto bg-white/80 dark:bg-slate-950/85 backdrop-blur-sm">
 
         {/* Header */}
         <header className={`bg-gradient-to-r ${preset.header} text-white px-4 sm:px-6 py-4 shadow-lg flex items-center justify-between shrink-0 relative`}>
@@ -286,7 +289,7 @@ export default function Home() {
               <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
                 msg.role === "user"
                   ? `bg-gradient-to-br ${preset.userBubble} text-white whitespace-pre-wrap rounded-br-md`
-                  : "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-100 dark:border-zinc-700 rounded-bl-md"
+                  : "bg-white/95 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-100 dark:border-zinc-700 rounded-bl-md"
               }`}>
                 {msg.role === "assistant" ? (
                   <div className="text-sm leading-relaxed space-y-2 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_h3]:text-sm [&_h3]:font-bold [&_p]:mb-1">
@@ -333,7 +336,7 @@ export default function Home() {
               <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${preset.avatar} flex items-center justify-center shrink-0 shadow-sm`}>
                 <Bot className="w-4 h-4 text-white" />
               </div>
-              <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 shadow-sm flex items-center gap-2">
+              <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-white/95 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 shadow-sm flex items-center gap-2">
                 <span className="text-sm text-zinc-500 dark:text-zinc-400">Đang tra cứu thông tin...</span>
                 <div className="flex gap-1">
                   <span className="w-2 h-2 bg-zinc-300 dark:bg-zinc-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
@@ -347,7 +350,7 @@ export default function Home() {
         </div>
 
         {/* Input */}
-        <div className="shrink-0 border-t border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur p-3 sm:p-4">
+        <div className="shrink-0 border-t border-red-200/50 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/80 backdrop-blur-md p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <input
               ref={inputRef}
@@ -357,7 +360,7 @@ export default function Home() {
               onKeyDown={handleKeyDown}
               placeholder="Nhập câu hỏi về thủ tục hành chính..."
               disabled={loading}
-              className={`flex-1 rounded-full border border-zinc-200 dark:border-zinc-700 px-4 py-2.5 text-sm sm:text-base outline-none focus:ring-2 ${preset.ring} focus:border-transparent bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-100 transition-all`}
+              className={`flex-1 rounded-full border border-zinc-200 dark:border-zinc-700 px-4 py-2.5 text-sm sm:text-base outline-none focus:ring-2 ${preset.ring} focus:border-transparent bg-white/90 dark:bg-zinc-900 dark:text-zinc-100 transition-all`}
             />
             <button
               onClick={() => sendMessage()}
