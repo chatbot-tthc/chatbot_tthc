@@ -4,37 +4,37 @@ import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import {
-  Send, Trash2, AlertTriangle, Settings, Info, X,
-  FileText, Folder, Search, CreditCard, HelpCircle,
-  Star, Clock, ChevronRight, LayoutDashboard, Sun, Moon,
-  Users, Car, Building2, Zap, CheckCircle, Heart
+  Trash2, AlertTriangle, Settings, Info, X,
+  Users, Car, Building2, Zap, CheckCircle, Heart,
+  CreditCard, LayoutDashboard, Sun, Moon
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const CraneLogo = ({ size = 40 }: { size?: number }) => (
+const BirdLogo = ({ size = 40 }: { size?: number }) => (
   <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="48" fill="#C9973C" stroke="#E8C06A" strokeWidth="3"/>
-    <ellipse cx="48" cy="58" rx="16" ry="10" fill="white" transform="rotate(-20 48 58)"/>
-    <path d="M50 48 Q62 36 76 40 Q69 47 58 48 Z" fill="white"/>
-    <path d="M50 48 Q38 40 26 43 Q33 49 44 49 Z" fill="white"/>
-    <path d="M54 46 Q60 36 66 30" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round"/>
-    <circle cx="66" cy="28" r="5" fill="white"/>
-    <ellipse cx="67.5" cy="24" rx="3" ry="2.5" fill="#C0392B"/>
-    <circle cx="68" cy="28" r="1.2" fill="#555"/>
-    <path d="M44 68 L40 80 M40 80 L36 85 M40 80 L44 85" stroke="#C9973C" strokeWidth="2" fill="none" strokeLinecap="round"/>
-    <path d="M52 68 L56 80 M56 80 L52 85 M56 80 L60 85" stroke="#C9973C" strokeWidth="2" fill="none" strokeLinecap="round"/>
+    <path d="M50 50 Q35 25 10 20 Q20 35 38 46 Z" fill="white" opacity="0.95"/>
+    <path d="M48 55 Q25 55 8 68 Q22 58 44 57 Z" fill="white" opacity="0.85"/>
+    <path d="M55 48 Q70 25 90 22 Q80 36 62 47 Z" fill="white" opacity="0.95"/>
+    <path d="M57 55 Q78 52 92 65 Q78 57 60 57 Z" fill="white" opacity="0.85"/>
+    <ellipse cx="52" cy="53" rx="9" ry="5" fill="white" transform="rotate(-10 52 53)"/>
+    <path d="M44 56 Q30 70 24 84 Q36 70 46 61 Z" fill="white" opacity="0.8"/>
+    <path d="M46 58 Q36 74 34 88 Q44 74 49 63 Z" fill="white" opacity="0.75"/>
+    <path d="M48 60 Q42 76 42 90 Q49 76 51 64 Z" fill="white" opacity="0.65"/>
+    <circle cx="60" cy="46" r="6" fill="white"/>
+    <path d="M64 44 L82 41 L64 49 Z" fill="white"/>
+    <circle cx="62" cy="45" r="1.5" fill="#C9973C"/>
+    <circle cx="62.5" cy="44.5" r="0.5" fill="white"/>
   </svg>
 );
 
-const MENU_ITEMS = [
-  { icon: FileText, label: "Thủ tục hành chính", desc: "Tra cứu, hướng dẫn thủ tục hành chính công" },
-  { icon: Folder, label: "Hồ sơ & Biểu mẫu", desc: "Hướng dẫn hồ sơ, biểu mẫu cần chuẩn bị" },
-  { icon: Search, label: "Tra cứu hồ sơ", desc: "Tra cứu tiến độ xử lý hồ sơ đã nộp" },
-  { icon: CreditCard, label: "Thanh toán lệ phí", desc: "Hướng dẫn thanh toán lệ phí trực tuyến" },
-  { icon: HelpCircle, label: "Câu hỏi thường gặp", desc: "Giải đáp các thắc mắc phổ biến" },
-  { icon: Star, label: "Đánh giá dịch vụ", desc: "Góp ý, đánh giá chất lượng dịch vụ" },
-];
+const PaperPlane = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <path d="M21.5 2.5L10 13" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+    <path d="M21.5 2.5L14.5 21.5L10 13L2 9L21.5 2.5Z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M10 13L12 16" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.6"/>
+  </svg>
+);
 
 const SUGGESTIONS = [
   { icon: Users, text: "Thủ tục đăng ký kết hôn cần giấy tờ gì?" },
@@ -73,7 +73,6 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -124,7 +123,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId || null, question }),
       });
-      if (!res.ok) throw new Error(`Server trả về lỗi ${res.status}`);
+      if (!res.ok) throw new Error(`Lỗi ${res.status}`);
       const data = await res.json();
       if (!sessionId && data.session_id) {
         const sid = String(data.session_id);
@@ -151,8 +150,11 @@ export default function Home() {
     localStorage.removeItem("tthc_session_id");
     localStorage.removeItem("tthc_messages");
     setMessages([]); setSessionId(null); setError(null);
-    fetch(`${API_URL}/api/v1/sessions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
-      .then((r) => r.json()).then((d) => { setSessionId(d.id); localStorage.setItem("tthc_session_id", d.id); }).catch(() => {});
+    fetch(`${API_URL}/api/v1/sessions`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+    }).then((r) => r.json()).then((d) => {
+      setSessionId(d.id); localStorage.setItem("tthc_session_id", d.id);
+    }).catch(() => {});
   };
 
   return (
@@ -163,16 +165,18 @@ export default function Home() {
         style={{ background: "linear-gradient(135deg, #6B1414 0%, #8B1A1A 60%, #7B1818 100%)", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: "url('/bg-vietnam.jpg')", backgroundSize: "cover", backgroundPosition: "center" }} />
+
         <div className="flex items-center gap-3 relative z-10">
           <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "linear-gradient(135deg, #B8852A, #E8C06A)", boxShadow: "0 0 0 3px rgba(201,151,60,0.4)" }}>
-            <CraneLogo size={48} />
+            <BirdLogo size={48} />
           </div>
           <div>
             <h1 className="text-white font-bold text-lg tracking-wider">TRỢ LÝ ẢO TTHC</h1>
             <p className="text-xs" style={{ color: "#E8C06A" }}>VNPT TP.HCM — Tra cứu thủ tục hành chính công</p>
           </div>
         </div>
+
         <div className="flex items-center gap-1 relative z-10" ref={settingsRef}>
           {[
             { icon: Info, label: "Thông tin", action: () => setInfoOpen(true) },
@@ -185,6 +189,7 @@ export default function Home() {
               <span className="text-[10px]">{label}</span>
             </button>
           ))}
+
           {settingsOpen && (
             <div className="absolute right-0 top-14 w-52 rounded-xl bg-white shadow-xl border border-gray-100 overflow-hidden z-20">
               <div className="p-3 border-b border-gray-100">
@@ -204,63 +209,23 @@ export default function Home() {
         </div>
       </header>
 
-      {/* BODY */}
+      {/* MAIN */}
       <div className="flex flex-1 overflow-hidden">
-
-        {/* SIDEBAR */}
-        <aside className="w-72 shrink-0 flex-col border-r overflow-y-auto hidden md:flex"
-          style={{ background: "#FFFBF5", borderColor: "#E8D8C0" }}>
-          <div className="px-4 py-3 flex items-center gap-2"
-            style={{ background: "linear-gradient(135deg, #7B1818, #9B2020)" }}>
-            <Star className="w-4 h-4" style={{ color: "#E8C06A" }} />
-            <span className="text-sm font-bold tracking-wide" style={{ color: "#E8C06A" }}>DANH MỤC HỖ TRỢ</span>
-          </div>
-          <nav className="flex-1 p-2">
-            {MENU_ITEMS.map((item, i) => {
-              const Icon = item.icon;
-              const isActive = activeMenu === i;
-              return (
-                <button key={i} onClick={() => setActiveMenu(i)}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 text-left transition-all"
-                  style={{
-                    background: isActive ? "linear-gradient(135deg, #7B1818, #8B1A1A)" : "transparent",
-                    color: isActive ? "white" : "#3D1A0E",
-                  }}>
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: isActive ? "rgba(255,255,255,0.15)" : "#F0E0C8" }}>
-                    <Icon className="w-4 h-4" style={{ color: isActive ? "#E8C06A" : "#C9973C" }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{item.label}</p>
-                    <p className="text-xs truncate" style={{ color: isActive ? "rgba(255,255,255,0.65)" : "#9B7B5A" }}>{item.desc}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 opacity-40 shrink-0" />
-                </button>
-              );
-            })}
-          </nav>
-          <div className="m-3 rounded-xl p-4" style={{ background: "#F5E8D5", border: "1px solid #E8C06A" }}>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4" style={{ color: "#C9973C" }} />
-              <span className="text-xs font-bold" style={{ color: "#7B1818" }}>GIỜ LÀM VIỆC</span>
-            </div>
-            <p className="text-xs mb-1" style={{ color: "#5A3A1A" }}>Thứ 2 - Thứ 6: 07:30 - 17:00</p>
-            <p className="text-xs" style={{ color: "#5A3A1A" }}>Thứ 7: 07:30 - 11:30</p>
-          </div>
-        </aside>
-
-        {/* MAIN */}
         <main className="flex-1 flex flex-col overflow-hidden">
+
           {error && (
             <div className="mx-4 mt-3 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2 shrink-0">
               <AlertTriangle className="w-4 h-4 shrink-0" />{error}
             </div>
           )}
 
+          {/* MESSAGES */}
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+            {/* WELCOME */}
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center relative">
-                <div className="absolute right-4 bottom-4 opacity-20 pointer-events-none">
+                <div className="absolute right-4 bottom-4 opacity-20 pointer-events-none select-none">
                   <svg viewBox="0 0 180 180" width="180" height="180">
                     {[0,40,80,120,160,200,240,280].map((deg, i) => (
                       <ellipse key={i} cx="90" cy="90" rx="10" ry="48"
@@ -269,16 +234,19 @@ export default function Home() {
                     <circle cx="90" cy="105" r="22" fill="#C9973C" opacity="0.9"/>
                   </svg>
                 </div>
+
                 <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5 shadow-xl"
                   style={{ background: "linear-gradient(135deg, #B8852A, #E8C06A)", boxShadow: "0 8px 24px rgba(201,151,60,0.4)" }}>
-                  <CraneLogo size={96} />
+                  <BirdLogo size={96} />
                 </div>
+
                 <h2 className="text-2xl font-bold mb-2" style={{ color: "#7B1818" }}>
                   Xin chào! Tôi có thể giúp gì cho bạn?
                 </h2>
-                <p className="text-sm mb-2" style={{ color: "#9B7B5A" }}>
+                <p className="text-sm mb-6" style={{ color: "#9B7B5A" }}>
                   Trợ lý AI hỗ trợ tra cứu thủ tục hành chính 24/7
                 </p>
+
                 <div className="flex gap-3 mb-8">
                   {BADGES.map(({ icon: Icon, text }) => (
                     <div key={text} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
@@ -287,10 +255,11 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+
                 <div className="flex flex-col gap-2 w-full max-w-lg">
                   {SUGGESTIONS.map(({ icon: Icon, text }) => (
                     <button key={text} onClick={() => sendMessage(text)} disabled={loading}
-                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all disabled:opacity-50 group"
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all disabled:opacity-50"
                       style={{ background: "white", border: "1.5px solid #E8D8C0", color: "#3D1A0E", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
                       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#C9973C"; (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 12px rgba(201,151,60,0.2)"; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8D8C0"; (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)"; }}>
@@ -298,32 +267,36 @@ export default function Home() {
                         <Icon className="w-4 h-4" style={{ color: "#C9973C" }} />
                       </div>
                       <span className="text-sm flex-1 font-medium">{text}</span>
-                      <ChevronRight className="w-4 h-4 opacity-30 group-hover:opacity-60 transition-opacity" style={{ color: "#C9973C" }} />
+                      <span className="text-xs opacity-30" style={{ color: "#C9973C" }}>›</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* CHAT MESSAGES */}
             {messages.map((msg, i) => (
               <div key={i} className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 {msg.role === "assistant" && (
                   <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm"
                     style={{ background: "linear-gradient(135deg, #B8852A, #E8C06A)" }}>
-                    <CraneLogo size={36} />
+                    <BirdLogo size={36} />
                   </div>
                 )}
+
                 <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${msg.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"}`}
                   style={msg.role === "user"
                     ? { background: "linear-gradient(135deg, #7B1818, #9B2020)", color: "white" }
                     : { background: "white", color: "#3D1A0E", border: "1px solid #E8D8C0" }}>
+
                   {msg.role === "assistant" ? (
-                    <div className="text-sm leading-relaxed space-y-2 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-1">
+                    <div className="text-sm leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-1">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                   ) : (
                     <p className="text-sm">{msg.content}</p>
                   )}
+
                   {msg.role === "assistant" && msg.is_fallback && (
                     <div className="mt-2 flex items-start gap-1.5 text-xs italic rounded-lg px-2.5 py-1.5"
                       style={{ background: "#FFF8E7", color: "#B7791F" }}>
@@ -331,6 +304,7 @@ export default function Home() {
                       Không tìm thấy thông tin chính xác, đây là câu trả lời tổng quát.
                     </div>
                   )}
+
                   {msg.role === "assistant" && msg.retrieved_chunks && msg.retrieved_chunks.length > 0 && !msg.is_fallback && (
                     <details className="mt-2">
                       <summary className="cursor-pointer text-xs font-medium select-none" style={{ color: "#C9973C" }}>
@@ -346,10 +320,12 @@ export default function Home() {
                       </div>
                     </details>
                   )}
+
                   {msg.role === "assistant" && msg.response_time_ms !== undefined && (
                     <p className="mt-1.5 text-[10px]" style={{ color: "#B0A090" }}>{(msg.response_time_ms / 1000).toFixed(1)}s</p>
                   )}
                 </div>
+
                 {msg.role === "user" && (
                   <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm text-white text-sm font-bold"
                     style={{ background: "linear-gradient(135deg, #9B2020, #7B1818)" }}>U</div>
@@ -357,11 +333,12 @@ export default function Home() {
               </div>
             ))}
 
+            {/* LOADING */}
             {loading && (
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
                   style={{ background: "linear-gradient(135deg, #B8852A, #E8C06A)" }}>
-                  <CraneLogo size={36} />
+                  <BirdLogo size={36} />
                 </div>
                 <div className="rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-2"
                   style={{ background: "white", border: "1px solid #E8D8C0" }}>
@@ -393,7 +370,7 @@ export default function Home() {
               <button onClick={() => sendMessage()} disabled={loading || !input.trim()}
                 className="w-11 h-11 rounded-full flex items-center justify-center shadow-md transition-all disabled:opacity-40 hover:scale-105"
                 style={{ background: "linear-gradient(135deg, #C9973C, #E8A020)" }}>
-                <Send className="w-5 h-5 text-white" />
+                <PaperPlane />
               </button>
             </div>
             <p className="mt-2 text-center text-[10px]" style={{ color: "#B0A090" }}>
@@ -403,19 +380,23 @@ export default function Home() {
         </main>
       </div>
 
+      {/* INFO MODAL */}
       {infoOpen && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setInfoOpen(false)}>
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={() => setInfoOpen(false)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-base flex items-center gap-2" style={{ color: "#7B1818" }}>
                 <Info className="w-4 h-4" />Giới thiệu
               </h3>
-              <button onClick={() => setInfoOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+              <button onClick={() => setInfoOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <p className="text-sm leading-relaxed mb-2 text-gray-700">
               <strong>Trợ lý ảo TTHC</strong> hỗ trợ tra cứu thủ tục hành chính công: hồ sơ cần chuẩn bị, trình tự thực hiện, thời hạn giải quyết — dựa trên các nghị định, thông tư hiện hành.
             </p>
-            <p className="text-xs text-gray-500">Lưu ý: thông tin chỉ mang tính tham khảo, vui lòng đối chiếu với cơ quan có thẩm quyền.</p>
+            <p className="text-xs text-gray-500">Lưu ý: thông tin chỉ mang tính tham khảo.</p>
           </div>
         </div>
       )}
