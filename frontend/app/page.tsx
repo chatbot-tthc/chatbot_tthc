@@ -146,16 +146,22 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden" style={{ background: "#FAF3E8" }}>
+    /* Nền lotus phủ toàn màn hình */
+    <div className="h-screen w-full flex flex-col"
+      style={{
+        backgroundImage: "url('/bg-lotus.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}>
 
       {/* HEADER */}
       <header className="shrink-0 flex items-center justify-between px-6 py-3 relative"
-        style={{ background: "linear-gradient(135deg, #6B1414 0%, #8B1A1A 60%, #7B1818 100%)", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
-        <div className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{ backgroundImage: "url('/bg-vietnam.jpg')", backgroundSize: "cover", backgroundPosition: "center" }} />
-
-        {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
+        style={{
+          background: "linear-gradient(135deg, #6B1414 0%, #8B1A1A 60%, #7B1818 100%)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+        }}>
+        <div className="flex items-center gap-3">
           <BirdLogo size={52} />
           <div>
             <h1 className="text-white font-bold text-lg tracking-wider">TRỢ LÝ ẢO TTHC</h1>
@@ -163,8 +169,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 relative z-10" ref={settingsRef}>
+        <div className="flex items-center gap-1" ref={settingsRef}>
           {[
             { icon: Info, label: "Thông tin", action: () => setInfoOpen(true) },
             { icon: Trash2, label: "Xóa lịch sử", action: clearHistory },
@@ -178,7 +183,7 @@ export default function Home() {
           ))}
 
           {settingsOpen && (
-            <div className="absolute right-0 top-14 w-52 rounded-xl bg-white shadow-xl border border-gray-100 overflow-hidden z-50">
+            <div className="absolute right-6 top-16 w-52 rounded-xl bg-white shadow-xl border border-gray-100 overflow-hidden z-50">
               <div className="p-3 border-b border-gray-100">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Chế độ hiển thị</p>
                 <button onClick={() => { const n = !darkMode; setDarkMode(n); document.documentElement.classList.toggle("dark", n); }}
@@ -196,8 +201,13 @@ export default function Home() {
         </div>
       </header>
 
-      {/* BODY */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      {/* BODY — card trắng mờ giữa màn hình, nền lotus thấy xung quanh */}
+      <div className="flex-1 flex flex-col max-w-3xl w-full mx-auto my-3 rounded-2xl overflow-hidden"
+        style={{
+          background: "rgba(255, 251, 245, 0.88)",
+          backdropFilter: "blur(8px)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+        }}>
 
         {error && (
           <div className="mx-4 mt-3 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2 shrink-0">
@@ -206,142 +216,127 @@ export default function Home() {
         )}
 
         {/* MESSAGES */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
           {/* WELCOME */}
           {messages.length === 0 && (
-            <div className="min-h-full flex flex-col items-center justify-center text-center px-6 py-8 relative"
-              style={{
-                backgroundImage: "url('/bg-lotus.jpg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}>
-              {/* Overlay nhẹ để text dễ đọc */}
-              <div className="absolute inset-0" style={{ background: "rgba(250,243,232,0.55)" }} />
+            <div className="h-full flex flex-col items-center justify-center text-center">
+              <BirdLogo size={96} />
 
-              <div className="relative z-10 flex flex-col items-center">
-                <BirdLogo size={100} />
+              <h2 className="text-2xl font-bold mt-4 mb-2" style={{ color: "#7B1818" }}>
+                Xin chào! Tôi có thể giúp gì cho bạn?
+              </h2>
+              <p className="text-sm mb-6" style={{ color: "#7B5A3A" }}>
+                Trợ lý AI hỗ trợ tra cứu thủ tục hành chính 24/7
+              </p>
 
-                <h2 className="text-2xl font-bold mt-4 mb-2" style={{ color: "#7B1818" }}>
-                  Xin chào! Tôi có thể giúp gì cho bạn?
-                </h2>
-                <p className="text-sm mb-6" style={{ color: "#7B5A3A" }}>
-                  Trợ lý AI hỗ trợ tra cứu thủ tục hành chính 24/7
-                </p>
+              <div className="flex gap-3 mb-8 flex-wrap justify-center">
+                {BADGES.map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                    style={{ background: "#F5E8D5", color: "#7B1818", border: "1px solid #E8C06A" }}>
+                    <Icon className="w-3 h-3" style={{ color: "#C9973C" }} />{text}
+                  </div>
+                ))}
+              </div>
 
-                <div className="flex gap-3 mb-8 flex-wrap justify-center">
-                  {BADGES.map(({ icon: Icon, text }) => (
-                    <div key={text} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                      style={{ background: "rgba(255,255,255,0.85)", color: "#7B1818", border: "1px solid #E8C06A" }}>
-                      <Icon className="w-3 h-3" style={{ color: "#C9973C" }} />{text}
+              <div className="flex flex-col gap-2 w-full max-w-lg">
+                {SUGGESTIONS.map(({ icon: Icon, text }) => (
+                  <button key={text} onClick={() => sendMessage(text)} disabled={loading}
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all disabled:opacity-50"
+                    style={{ background: "white", border: "1.5px solid #E8D8C0", color: "#3D1A0E", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#C9973C"; (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 12px rgba(201,151,60,0.2)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8D8C0"; (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 6px rgba(0,0,0,0.06)"; }}>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "#F5E8D5" }}>
+                      <Icon className="w-4 h-4" style={{ color: "#C9973C" }} />
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-col gap-2 w-full max-w-lg">
-                  {SUGGESTIONS.map(({ icon: Icon, text }) => (
-                    <button key={text} onClick={() => sendMessage(text)} disabled={loading}
-                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all disabled:opacity-50"
-                      style={{ background: "rgba(255,255,255,0.9)", border: "1.5px solid #E8D8C0", color: "#3D1A0E", boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#C9973C"; (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 12px rgba(201,151,60,0.25)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#E8D8C0"; (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 8px rgba(0,0,0,0.08)"; }}>
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: "#F5E8D5" }}>
-                        <Icon className="w-4 h-4" style={{ color: "#C9973C" }} />
-                      </div>
-                      <span className="text-sm flex-1 font-medium">{text}</span>
-                      <span className="text-sm opacity-30" style={{ color: "#C9973C" }}>›</span>
-                    </button>
-                  ))}
-                </div>
+                    <span className="text-sm flex-1 font-medium">{text}</span>
+                    <span className="text-sm opacity-30" style={{ color: "#C9973C" }}>›</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
           {/* CHAT MESSAGES */}
-          {messages.length > 0 && (
-            <div className="px-6 py-4 space-y-4">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {msg.role === "assistant" && (
-                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-sm">
-                      <BirdLogo size={36} />
-                    </div>
-                  )}
-
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${msg.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"}`}
-                    style={msg.role === "user"
-                      ? { background: "linear-gradient(135deg, #7B1818, #9B2020)", color: "white" }
-                      : { background: "white", color: "#3D1A0E", border: "1px solid #E8D8C0" }}>
-
-                    {msg.role === "assistant" ? (
-                      <div className="text-sm leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-1">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="text-sm">{msg.content}</p>
-                    )}
-
-                    {msg.role === "assistant" && msg.is_fallback && (
-                      <div className="mt-2 flex items-start gap-1.5 text-xs italic rounded-lg px-2.5 py-1.5"
-                        style={{ background: "#FFF8E7", color: "#B7791F" }}>
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        Không tìm thấy thông tin chính xác, đây là câu trả lời tổng quát.
-                      </div>
-                    )}
-
-                    {msg.role === "assistant" && msg.retrieved_chunks && msg.retrieved_chunks.length > 0 && !msg.is_fallback && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs font-medium select-none" style={{ color: "#C9973C" }}>
-                          ▼ Nguồn tham khảo ({msg.retrieved_chunks.length})
-                        </summary>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {msg.retrieved_chunks.map((c, j) => (
-                            <span key={j} className="inline-flex items-center rounded-full text-[11px] px-2.5 py-1"
-                              style={{ background: "#FDF6EC", color: "#7B1818", border: "1px solid #E8C06A" }}>
-                              {c.document_title || c.ma_thu_tuc}{c.score > 0 ? ` · ${(c.score * 100).toFixed(0)}%` : ""}
-                            </span>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-
-                    {msg.role === "assistant" && msg.response_time_ms !== undefined && (
-                      <p className="mt-1.5 text-[10px]" style={{ color: "#B0A090" }}>{(msg.response_time_ms / 1000).toFixed(1)}s</p>
-                    )}
-                  </div>
-
-                  {msg.role === "user" && (
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm text-white text-sm font-bold"
-                      style={{ background: "linear-gradient(135deg, #9B2020, #7B1818)" }}>U</div>
-                  )}
-                </div>
-              ))}
-
-              {/* LOADING */}
-              {loading && (
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-full overflow-hidden shrink-0">
-                    <BirdLogo size={36} />
-                  </div>
-                  <div className="rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-2"
-                    style={{ background: "white", border: "1px solid #E8D8C0" }}>
-                    <span className="text-sm" style={{ color: "#9B7B5A" }}>Đang tra cứu thông tin...</span>
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.3s]" style={{ background: "#C9973C" }} />
-                      <span className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.15s]" style={{ background: "#C9973C" }} />
-                      <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: "#C9973C" }} />
-                    </div>
-                  </div>
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              {msg.role === "assistant" && (
+                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-sm">
+                  <BirdLogo size={36} />
                 </div>
               )}
-              <div ref={bottomRef} />
+
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${msg.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"}`}
+                style={msg.role === "user"
+                  ? { background: "linear-gradient(135deg, #7B1818, #9B2020)", color: "white" }
+                  : { background: "white", color: "#3D1A0E", border: "1px solid #E8D8C0" }}>
+
+                {msg.role === "assistant" ? (
+                  <div className="text-sm leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-1">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm">{msg.content}</p>
+                )}
+
+                {msg.role === "assistant" && msg.is_fallback && (
+                  <div className="mt-2 flex items-start gap-1.5 text-xs italic rounded-lg px-2.5 py-1.5"
+                    style={{ background: "#FFF8E7", color: "#B7791F" }}>
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    Không tìm thấy thông tin chính xác, đây là câu trả lời tổng quát.
+                  </div>
+                )}
+
+                {msg.role === "assistant" && msg.retrieved_chunks && msg.retrieved_chunks.length > 0 && !msg.is_fallback && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs font-medium select-none" style={{ color: "#C9973C" }}>
+                      ▼ Nguồn tham khảo ({msg.retrieved_chunks.length})
+                    </summary>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {msg.retrieved_chunks.map((c, j) => (
+                        <span key={j} className="inline-flex items-center rounded-full text-[11px] px-2.5 py-1"
+                          style={{ background: "#FDF6EC", color: "#7B1818", border: "1px solid #E8C06A" }}>
+                          {c.document_title || c.ma_thu_tuc}{c.score > 0 ? ` · ${(c.score * 100).toFixed(0)}%` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                {msg.role === "assistant" && msg.response_time_ms !== undefined && (
+                  <p className="mt-1.5 text-[10px]" style={{ color: "#B0A090" }}>{(msg.response_time_ms / 1000).toFixed(1)}s</p>
+                )}
+              </div>
+
+              {msg.role === "user" && (
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm text-white text-sm font-bold"
+                  style={{ background: "linear-gradient(135deg, #9B2020, #7B1818)" }}>U</div>
+              )}
+            </div>
+          ))}
+
+          {/* LOADING */}
+          {loading && (
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0">
+                <BirdLogo size={36} />
+              </div>
+              <div className="rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-2"
+                style={{ background: "white", border: "1px solid #E8D8C0" }}>
+                <span className="text-sm" style={{ color: "#9B7B5A" }}>Đang tra cứu thông tin...</span>
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.3s]" style={{ background: "#C9973C" }} />
+                  <span className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.15s]" style={{ background: "#C9973C" }} />
+                  <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: "#C9973C" }} />
+                </div>
+              </div>
             </div>
           )}
+          <div ref={bottomRef} />
         </div>
 
         {/* INPUT */}
-        <div className="shrink-0 px-6 py-4" style={{ background: "#FFFBF5", borderTop: "1px solid #E8D8C0" }}>
+        <div className="shrink-0 px-6 py-4 border-t" style={{ borderColor: "#E8D8C0" }}>
           <div className="flex items-center gap-3">
             <input ref={inputRef} type="text" value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -363,7 +358,7 @@ export default function Home() {
             ✦ Thông tin chỉ mang tính tham khảo, vui lòng đối chiếu với cơ quan có thẩm quyền để được hướng dẫn chính xác.
           </p>
         </div>
-      </main>
+      </div>
 
       {/* INFO MODAL */}
       {infoOpen && (
