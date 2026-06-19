@@ -77,11 +77,26 @@ export default function Home() {
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({session_id:sessionId||null,question:q}),
       });
-      if(!res.ok)throw new Error();
+      if(!res.ok){
+        let msg="Không thể kết nối tới server.";
+        try{
+          const errData=await res.json();
+          const detail=errData?.detail||"";
+          if(res.status===429||detail.includes("429")) msg="Hệ thống đang quá tải, vui lòng thử lại sau ít phút.";
+          else if(res.status===503) msg="Server đang khởi động lại, vui lòng thử lại sau.";
+          else if(res.status===500) msg="Lỗi server nội bộ, vui lòng thử lại.";
+          else if(detail) msg=`Lỗi: ${detail}`;
+        }catch{}
+        throw new Error(msg);
+      }
       const d=await res.json();
       if(!sessionId&&d.session_id){const sid=String(d.session_id);setSessionId(sid);localStorage.setItem("tthc_session_id",sid);}
       setMessages(p=>[...p,{role:"assistant",content:d.answer,retrieved_chunks:d.retrieved_chunks,is_fallback:d.is_fallback,response_time_ms:d.response_time_ms}]);
-    }catch{setError("Không thể kết nối tới server.");setMessages(p=>p.slice(0,-1));setInput(q);}
+    }catch(e:any){
+      setError(e.message||"Không thể kết nối tới server.");
+      setMessages(p=>p.slice(0,-1));
+      setInput(q);
+    }
     finally{setLoading(false);}
   };
 
@@ -94,12 +109,7 @@ export default function Home() {
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden"
-      style={{
-        backgroundImage:"url('/bg-lotus.png')",
-        backgroundSize:"cover",
-        backgroundPosition:"center top",
-        backgroundAttachment:"fixed",
-      }}>
+      style={{backgroundImage:"url('/bg-lotus.png')",backgroundSize:"cover",backgroundPosition:"center top",backgroundAttachment:"fixed"}}>
 
       {/* ── HEADER ── */}
       <header className="shrink-0 flex items-center justify-between px-6 py-3 relative z-20"
@@ -219,15 +229,9 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* ── MAIN ──
-            🔑 KEY FIX: opacity 0.72 thay vì 0.85 → bg-lotus từ root div chiếu qua đều
-            ở cả welcome lẫn chat, không cần overlay phụ bên trong              */}
+        {/* ── MAIN ── */}
         <main className="flex-1 flex flex-col overflow-hidden m-3 rounded-2xl"
-          style={{
-            background:"rgba(255,250,244,0.72)",
-            backdropFilter:"blur(4px)",
-            boxShadow:"0 4px 24px rgba(0,0,0,0.1)",
-          }}>
+          style={{background:"rgba(255,250,244,0.72)",backdropFilter:"blur(4px)",boxShadow:"0 4px 24px rgba(0,0,0,0.1)"}}>
 
           {error&&(
             <div className="mx-4 mt-3 shrink-0 rounded-2xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2">
@@ -241,7 +245,6 @@ export default function Home() {
             {messages.length===0&&(
               <div className="min-h-full flex flex-col items-center justify-center px-8 py-10">
                 <div className="flex flex-col items-center w-full">
-
                   <div className="mb-6 relative">
                     <div className="absolute inset-0 rounded-full pointer-events-none"
                       style={{background:"radial-gradient(circle,rgba(232,192,106,0.55),transparent)",transform:"scale(2.2)",filter:"blur(18px)"}}/>
