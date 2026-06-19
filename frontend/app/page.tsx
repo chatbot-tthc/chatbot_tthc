@@ -94,7 +94,12 @@ export default function Home() {
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden"
-      style={{backgroundImage:"url('/bg-lotus.png')",backgroundSize:"cover",backgroundPosition:"center top",backgroundAttachment:"fixed"}}>
+      style={{
+        backgroundImage:"url('/bg-lotus.png')",
+        backgroundSize:"cover",
+        backgroundPosition:"center top",
+        backgroundAttachment:"fixed",
+      }}>
 
       {/* ── HEADER ── */}
       <header className="shrink-0 flex items-center justify-between px-6 py-3 relative z-20"
@@ -104,7 +109,7 @@ export default function Home() {
 
         <div className="flex items-center gap-4 relative z-10">
           <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg"
-            style={{background:"linear-gradient(135deg,#B8852A,#E8C06A)",boxShadow:"0 0 0 2px rgba(232,192,106,0.4), 0 4px 16px rgba(0,0,0,0.3)"}}>
+            style={{background:"linear-gradient(135deg,#B8852A,#E8C06A)",boxShadow:"0 0 0 2px rgba(232,192,106,0.4),0 4px 16px rgba(0,0,0,0.3)"}}>
             <BirdLogo size={56}/>
           </div>
           <div>
@@ -115,9 +120,9 @@ export default function Home() {
 
         <div className="flex items-center gap-2 relative z-10" ref={settingsRef}>
           {([
-            {icon:Info,    label:"Thông tin",    action:()=>setInfoOpen(true)},
-            {icon:Trash2,  label:"Xóa lịch sử",  action:clearHistory},
-            {icon:Settings,label:"Cài đặt",       action:()=>setSettingsOpen(v=>!v)},
+            {icon:Info,    label:"Thông tin",   action:()=>setInfoOpen(true)},
+            {icon:Trash2,  label:"Xóa lịch sử", action:clearHistory},
+            {icon:Settings,label:"Cài đặt",      action:()=>setSettingsOpen(v=>!v)},
           ] as const).map(({icon:Icon,label,action})=>(
             <button key={label} onClick={action}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-white transition-all hover:bg-white/15"
@@ -153,7 +158,7 @@ export default function Home() {
 
         {/* ── SIDEBAR ── */}
         <aside className="w-64 shrink-0 hidden md:flex flex-col m-3 mr-0 rounded-2xl overflow-hidden"
-          style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",boxShadow:"0 4px 24px rgba(0,0,0,0.12)"}}>
+          style={{background:"rgba(255,255,255,0.93)",backdropFilter:"blur(16px)",boxShadow:"0 4px 24px rgba(0,0,0,0.12)"}}>
 
           <div className="flex items-center gap-2 px-4 py-3 shrink-0"
             style={{background:"linear-gradient(135deg,#7B1818,#9B2020)"}}>
@@ -162,7 +167,6 @@ export default function Home() {
           </div>
 
           <nav className="flex-1 p-3 space-y-2">
-            {/* Chat - active */}
             <div className="flex items-center gap-3 p-3 rounded-xl cursor-default"
               style={{background:"linear-gradient(135deg,#7B1818,#9B2020)",boxShadow:"0 4px 12px rgba(123,24,24,0.35)"}}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -176,7 +180,6 @@ export default function Home() {
               <ChevronRight className="w-4 h-4 text-white opacity-60 shrink-0"/>
             </div>
 
-            {/* Dashboard */}
             <Link href="/dashboard"
               className="flex items-center gap-3 p-3 rounded-xl transition-all"
               style={{border:"1.5px solid rgba(212,168,67,0.25)"}}
@@ -194,7 +197,6 @@ export default function Home() {
             </Link>
           </nav>
 
-          {/* GIỜ LÀM VIỆC */}
           <div className="m-3 p-4 rounded-2xl shrink-0"
             style={{background:"linear-gradient(135deg,#FDF5E6,#FAE8C8)",border:"1.5px solid #E8C06A",boxShadow:"0 2px 8px rgba(212,168,67,0.15)"}}>
             <div className="flex items-center gap-2 mb-3">
@@ -217,37 +219,34 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* ── MAIN ── */}
-        <main className="flex-1 flex flex-col overflow-hidden m-3 rounded-2xl relative"
-          style={{boxShadow:"0 4px 24px rgba(0,0,0,0.12)"}}>
-
-          {/* 🔑 FIX: Lotus background luôn hiển thị dù welcome hay chat */}
-          <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none" style={{zIndex:0}}>
-            <div className="absolute inset-0"
-              style={{backgroundImage:"url('/bg-lotus.png')",backgroundSize:"cover",backgroundPosition:"center top",opacity:0.35}}/>
-            <div className="absolute inset-0"
-              style={{background:"rgba(255,250,244,0.78)",backdropFilter:"blur(6px)"}}/>
-          </div>
+        {/* ── MAIN ──
+            🔑 KEY FIX: opacity 0.72 thay vì 0.85 → bg-lotus từ root div chiếu qua đều
+            ở cả welcome lẫn chat, không cần overlay phụ bên trong              */}
+        <main className="flex-1 flex flex-col overflow-hidden m-3 rounded-2xl"
+          style={{
+            background:"rgba(255,250,244,0.72)",
+            backdropFilter:"blur(4px)",
+            boxShadow:"0 4px 24px rgba(0,0,0,0.1)",
+          }}>
 
           {error&&(
-            <div className="relative z-10 mx-4 mt-3 shrink-0 rounded-2xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2">
+            <div className="mx-4 mt-3 shrink-0 rounded-2xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0"/>{error}
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto relative z-10">
+          <div className="flex-1 overflow-y-auto">
 
             {/* ── WELCOME ── */}
             {messages.length===0&&(
               <div className="min-h-full flex flex-col items-center justify-center px-8 py-10">
                 <div className="flex flex-col items-center w-full">
 
-                  {/* Bird avatar */}
                   <div className="mb-6 relative">
                     <div className="absolute inset-0 rounded-full pointer-events-none"
-                      style={{background:"radial-gradient(circle,rgba(232,192,106,0.5),transparent)",transform:"scale(2.2)",filter:"blur(18px)"}}/>
+                      style={{background:"radial-gradient(circle,rgba(232,192,106,0.55),transparent)",transform:"scale(2.2)",filter:"blur(18px)"}}/>
                     <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center relative shadow-xl"
-                      style={{background:"linear-gradient(135deg,#B8852A,#E8C06A)",boxShadow:"0 0 0 4px rgba(232,192,106,0.35), 0 8px 32px rgba(184,133,42,0.45)"}}>
+                      style={{background:"linear-gradient(135deg,#B8852A,#E8C06A)",boxShadow:"0 0 0 4px rgba(232,192,106,0.35),0 8px 32px rgba(184,133,42,0.45)"}}>
                       <BirdLogo size={96}/>
                     </div>
                   </div>
@@ -301,7 +300,7 @@ export default function Home() {
                     <div className={`max-w-[78%] rounded-3xl px-5 py-3.5 shadow-sm ${msg.role==="user"?"rounded-br-lg":"rounded-bl-lg"}`}
                       style={msg.role==="user"
                         ?{background:"linear-gradient(135deg,#7B1818,#A02020)",color:"white"}
-                        :{background:"rgba(255,255,255,0.92)",color:"#2D1A0A",border:"1px solid rgba(212,168,67,0.25)"}}>
+                        :{background:"rgba(255,255,255,0.93)",color:"#2D1A0A",border:"1px solid rgba(212,168,67,0.25)"}}>
                       {msg.role==="assistant"
                         ?<div className="text-sm leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-1.5">
                             <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -348,7 +347,7 @@ export default function Home() {
                       <BirdLogo size={36}/>
                     </div>
                     <div className="rounded-3xl rounded-bl-lg px-5 py-3.5 shadow-sm flex items-center gap-3"
-                      style={{background:"rgba(255,255,255,0.92)",border:"1px solid rgba(212,168,67,0.25)"}}>
+                      style={{background:"rgba(255,255,255,0.93)",border:"1px solid rgba(212,168,67,0.25)"}}>
                       <span className="text-sm" style={{color:"#8B5A2B"}}>Đang tra cứu...</span>
                       <div className="flex gap-1">
                         {["-0.3s","-0.15s","0s"].map(d=>(
@@ -365,8 +364,8 @@ export default function Home() {
           </div>
 
           {/* ── INPUT ── */}
-          <div className="shrink-0 px-5 py-4 relative z-10"
-            style={{background:"rgba(255,251,245,0.9)",borderTop:"1px solid rgba(212,168,67,0.2)",boxShadow:"0 -2px 16px rgba(0,0,0,0.05)"}}>
+          <div className="shrink-0 px-5 py-4"
+            style={{background:"rgba(255,251,245,0.88)",borderTop:"1px solid rgba(212,168,67,0.2)",boxShadow:"0 -2px 16px rgba(0,0,0,0.05)"}}>
             <div className="flex items-center gap-3">
               <input ref={inputRef} type="text" value={input}
                 onChange={e=>setInput(e.target.value)}
