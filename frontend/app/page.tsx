@@ -13,7 +13,8 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const BirdLogo = ({ size = 40 }: { size?: number }) => (
-  <img src="/bird-logo.png" width={size} height={size} alt="logo" style={{ objectFit:"contain" }} />
+  <img src="/bird-logo.png" width={size} height={size} alt="logo"
+    style={{ objectFit:"cover", borderRadius:"50%", display:"block" }} />
 );
 
 const PaperPlane = () => (
@@ -98,15 +99,13 @@ export default function Home() {
       {/* ── HEADER ── */}
       <header className="shrink-0 flex items-center justify-between px-6 py-3 relative z-20"
         style={{background:"linear-gradient(135deg,#5C1010 0%,#8B1A1A 55%,#6B1414 100%)",boxShadow:"0 2px 20px rgba(0,0,0,0.45)"}}>
-
-        {/* Hoa văn header */}
         <div className="absolute inset-0 opacity-15 pointer-events-none"
           style={{backgroundImage:"url('/bg-vietnam.jpg')",backgroundSize:"120%",backgroundPosition:"right center",mixBlendMode:"luminosity"}}/>
 
         <div className="flex items-center gap-4 relative z-10">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+          <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg"
             style={{background:"linear-gradient(135deg,#B8852A,#E8C06A)",boxShadow:"0 0 0 2px rgba(232,192,106,0.4), 0 4px 16px rgba(0,0,0,0.3)"}}>
-            <BirdLogo size={52}/>
+            <BirdLogo size={56}/>
           </div>
           <div>
             <h1 className="text-white font-bold text-xl tracking-widest drop-shadow">TRỢ LÝ ẢO TTHC</h1>
@@ -116,9 +115,9 @@ export default function Home() {
 
         <div className="flex items-center gap-2 relative z-10" ref={settingsRef}>
           {([
-            {icon:Info,    label:"Thông tin",   action:()=>setInfoOpen(true)},
-            {icon:Trash2,  label:"Xóa lịch sử", action:clearHistory},
-            {icon:Settings,label:"Cài đặt",      action:()=>setSettingsOpen(v=>!v)},
+            {icon:Info,    label:"Thông tin",    action:()=>setInfoOpen(true)},
+            {icon:Trash2,  label:"Xóa lịch sử",  action:clearHistory},
+            {icon:Settings,label:"Cài đặt",       action:()=>setSettingsOpen(v=>!v)},
           ] as const).map(({icon:Icon,label,action})=>(
             <button key={label} onClick={action}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-white transition-all hover:bg-white/15"
@@ -156,14 +155,12 @@ export default function Home() {
         <aside className="w-64 shrink-0 hidden md:flex flex-col m-3 mr-0 rounded-2xl overflow-hidden"
           style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",boxShadow:"0 4px 24px rgba(0,0,0,0.12)"}}>
 
-          {/* Sidebar header */}
           <div className="flex items-center gap-2 px-4 py-3 shrink-0"
-            style={{background:"linear-gradient(135deg,#7B1818,#9B2020)",borderRadius:"16px 16px 0 0"}}>
+            style={{background:"linear-gradient(135deg,#7B1818,#9B2020)"}}>
             <Star className="w-4 h-4" style={{color:"#E8C06A"}}/>
             <span className="text-xs font-bold tracking-widest" style={{color:"#E8C06A"}}>DANH MỤC HỖ TRỢ</span>
           </div>
 
-          {/* Nav items */}
           <nav className="flex-1 p-3 space-y-2">
             {/* Chat - active */}
             <div className="flex items-center gap-3 p-3 rounded-xl cursor-default"
@@ -181,7 +178,7 @@ export default function Home() {
 
             {/* Dashboard */}
             <Link href="/dashboard"
-              className="flex items-center gap-3 p-3 rounded-xl transition-all group"
+              className="flex items-center gap-3 p-3 rounded-xl transition-all"
               style={{border:"1.5px solid rgba(212,168,67,0.25)"}}
               onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(245,232,213,0.8)";el.style.borderColor="#C9973C";}}
               onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="transparent";el.style.borderColor="rgba(212,168,67,0.25)";}}>
@@ -221,39 +218,42 @@ export default function Home() {
         </aside>
 
         {/* ── MAIN ── */}
-        <main className="flex-1 flex flex-col overflow-hidden m-3 rounded-2xl"
-          style={{background:"rgba(255,250,244,0.85)",backdropFilter:"blur(8px)",boxShadow:"0 4px 24px rgba(0,0,0,0.1)"}}>
+        <main className="flex-1 flex flex-col overflow-hidden m-3 rounded-2xl relative"
+          style={{boxShadow:"0 4px 24px rgba(0,0,0,0.12)"}}>
+
+          {/* 🔑 FIX: Lotus background luôn hiển thị dù welcome hay chat */}
+          <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none" style={{zIndex:0}}>
+            <div className="absolute inset-0"
+              style={{backgroundImage:"url('/bg-lotus.png')",backgroundSize:"cover",backgroundPosition:"center top",opacity:0.35}}/>
+            <div className="absolute inset-0"
+              style={{background:"rgba(255,250,244,0.78)",backdropFilter:"blur(6px)"}}/>
+          </div>
 
           {error&&(
-            <div className="mx-4 mt-3 shrink-0 rounded-2xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2">
+            <div className="relative z-10 mx-4 mt-3 shrink-0 rounded-2xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0"/>{error}
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto relative z-10">
 
             {/* ── WELCOME ── */}
             {messages.length===0&&(
-              <div className="min-h-full flex flex-col items-center justify-center px-8 py-10 relative">
-                {/* Subtle lotus bg overlay in main */}
-                <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-                  <div className="absolute inset-0"
-                    style={{backgroundImage:"url('/bg-lotus.png')",backgroundSize:"cover",backgroundPosition:"center",opacity:0.18}}/>
-                </div>
+              <div className="min-h-full flex flex-col items-center justify-center px-8 py-10">
+                <div className="flex flex-col items-center w-full">
 
-                <div className="relative z-10 flex flex-col items-center w-full">
                   {/* Bird avatar */}
                   <div className="mb-6 relative">
-                    <div className="absolute inset-0 rounded-full"
-                      style={{background:"radial-gradient(circle,rgba(232,192,106,0.5),transparent)",transform:"scale(2)",filter:"blur(16px)"}}/>
-                    <div className="w-24 h-24 rounded-full flex items-center justify-center relative shadow-xl"
-                      style={{background:"linear-gradient(135deg,#B8852A,#E8C06A)",boxShadow:"0 0 0 4px rgba(232,192,106,0.3), 0 8px 32px rgba(184,133,42,0.4)"}}>
-                      <BirdLogo size={88}/>
+                    <div className="absolute inset-0 rounded-full pointer-events-none"
+                      style={{background:"radial-gradient(circle,rgba(232,192,106,0.5),transparent)",transform:"scale(2.2)",filter:"blur(18px)"}}/>
+                    <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center relative shadow-xl"
+                      style={{background:"linear-gradient(135deg,#B8852A,#E8C06A)",boxShadow:"0 0 0 4px rgba(232,192,106,0.35), 0 8px 32px rgba(184,133,42,0.45)"}}>
+                      <BirdLogo size={96}/>
                     </div>
                   </div>
 
                   <h2 className="text-3xl font-bold mb-2 text-center"
-                    style={{color:"#5C1010",textShadow:"0 2px 8px rgba(92,16,16,0.12)"}}>
+                    style={{color:"#5C1010",textShadow:"0 2px 8px rgba(92,16,16,0.15)"}}>
                     Xin chào! Tôi có thể giúp gì cho bạn?
                   </h2>
                   <p className="text-sm text-center mb-1 font-medium" style={{color:"#8B5A2B"}}>
@@ -267,20 +267,19 @@ export default function Home() {
                     <span>Thuận tiện</span>
                   </p>
 
-                  {/* Suggestions - vertical */}
                   <div className="flex flex-col gap-2.5 w-full max-w-xl">
                     {SUGGESTIONS.map(({icon:Icon,text})=>(
                       <button key={text} onClick={()=>sendMessage(text)} disabled={loading}
-                        className="flex items-center gap-4 px-5 py-3.5 rounded-2xl text-left transition-all duration-200 disabled:opacity-50 group"
-                        style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(212,168,67,0.3)",boxShadow:"0 2px 10px rgba(0,0,0,0.06)"}}
+                        className="flex items-center gap-4 px-5 py-3.5 rounded-2xl text-left transition-all duration-200 disabled:opacity-50"
+                        style={{background:"rgba(255,255,255,0.88)",border:"1.5px solid rgba(212,168,67,0.3)",boxShadow:"0 2px 10px rgba(0,0,0,0.06)"}}
                         onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,1)";el.style.borderColor="#C9973C";el.style.boxShadow="0 4px 20px rgba(201,151,60,0.22)";el.style.transform="translateX(4px)";}}
-                        onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.9)";el.style.borderColor="rgba(212,168,67,0.3)";el.style.boxShadow="0 2px 10px rgba(0,0,0,0.06)";el.style.transform="translateX(0)";}}>
+                        onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.88)";el.style.borderColor="rgba(212,168,67,0.3)";el.style.boxShadow="0 2px 10px rgba(0,0,0,0.06)";el.style.transform="translateX(0)";}}>
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                           style={{background:"linear-gradient(135deg,#F5E8D5,#EDD9B8)"}}>
                           <Icon className="w-5 h-5" style={{color:"#C9973C"}}/>
                         </div>
                         <span className="flex-1 text-sm font-medium" style={{color:"#3D1A0E"}}>{text}</span>
-                        <ChevronRight className="w-4 h-4 shrink-0 opacity-30 group-hover:opacity-70 transition-opacity" style={{color:"#C9973C"}}/>
+                        <ChevronRight className="w-4 h-4 shrink-0 opacity-30" style={{color:"#C9973C"}}/>
                       </button>
                     ))}
                   </div>
@@ -302,7 +301,7 @@ export default function Home() {
                     <div className={`max-w-[78%] rounded-3xl px-5 py-3.5 shadow-sm ${msg.role==="user"?"rounded-br-lg":"rounded-bl-lg"}`}
                       style={msg.role==="user"
                         ?{background:"linear-gradient(135deg,#7B1818,#A02020)",color:"white"}
-                        :{background:"rgba(255,255,255,0.95)",color:"#2D1A0A",border:"1px solid rgba(212,168,67,0.25)"}}>
+                        :{background:"rgba(255,255,255,0.92)",color:"#2D1A0A",border:"1px solid rgba(212,168,67,0.25)"}}>
                       {msg.role==="assistant"
                         ?<div className="text-sm leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-1.5">
                             <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -349,7 +348,7 @@ export default function Home() {
                       <BirdLogo size={36}/>
                     </div>
                     <div className="rounded-3xl rounded-bl-lg px-5 py-3.5 shadow-sm flex items-center gap-3"
-                      style={{background:"rgba(255,255,255,0.95)",border:"1px solid rgba(212,168,67,0.25)"}}>
+                      style={{background:"rgba(255,255,255,0.92)",border:"1px solid rgba(212,168,67,0.25)"}}>
                       <span className="text-sm" style={{color:"#8B5A2B"}}>Đang tra cứu...</span>
                       <div className="flex gap-1">
                         {["-0.3s","-0.15s","0s"].map(d=>(
@@ -366,8 +365,8 @@ export default function Home() {
           </div>
 
           {/* ── INPUT ── */}
-          <div className="shrink-0 px-5 py-4"
-            style={{background:"rgba(255,251,245,0.95)",borderTop:"1px solid rgba(212,168,67,0.2)",boxShadow:"0 -2px 16px rgba(0,0,0,0.05)"}}>
+          <div className="shrink-0 px-5 py-4 relative z-10"
+            style={{background:"rgba(255,251,245,0.9)",borderTop:"1px solid rgba(212,168,67,0.2)",boxShadow:"0 -2px 16px rgba(0,0,0,0.05)"}}>
             <div className="flex items-center gap-3">
               <input ref={inputRef} type="text" value={input}
                 onChange={e=>setInput(e.target.value)}
