@@ -53,7 +53,7 @@ services:
       - ./backend:/app
       - ./data:/app/data
       - ./scripts/crawler/data/pdf:/app/pdf_data:ro
-
+      - ./scripts:/scripts
 volumes:
   postgres_data:
   chroma_data:
