@@ -24,10 +24,10 @@ const PaperPlane = () => (
 );
 
 const SUGGESTIONS = [
-  { icon: Users,     text: "Thủ tục đăng ký kết hôn",     sub: "Giấy tờ & hồ sơ cần chuẩn bị" },
-  { icon: Car,       text: "Đăng ký xe máy",               sub: "Trình tự và thủ tục thực hiện" },
-  { icon: CreditCard,text: "Cấp lại CCCD bị mất",          sub: "Hồ sơ & nơi nộp đơn" },
-  { icon: Building2, text: "Đăng ký hộ kinh doanh",        sub: "Điều kiện & thủ tục đăng ký" },
+  { icon: Users,      text: "Thủ tục đăng ký kết hôn",   sub: "Giấy tờ & hồ sơ cần chuẩn bị" },
+  { icon: Car,        text: "Đăng ký xe máy",             sub: "Trình tự và thủ tục thực hiện" },
+  { icon: CreditCard, text: "Cấp lại CCCD bị mất",        sub: "Hồ sơ & nơi nộp đơn" },
+  { icon: Building2,  text: "Đăng ký hộ kinh doanh",      sub: "Điều kiện & thủ tục đăng ký" },
 ];
 
 interface RetrievedChunk { content:string; document_title:string; ma_thu_tuc:string; score:number; }
@@ -142,6 +142,19 @@ export default function Home() {
         </div>
       </header>
 
+      {/* DẢI TRANG TRÍ ĐỎ */}
+      <div className="shrink-0 h-9 relative overflow-hidden"
+        style={{background:"linear-gradient(135deg,#4A0C0C 0%,#7B1818 60%,#5C1010 100%)"}}>
+        <div className="absolute inset-0" style={{
+          backgroundImage:"url('/bg-vietnam.jpg')",
+          backgroundSize:"120%",
+          backgroundPosition:"right center",
+          backgroundRepeat:"no-repeat",
+          opacity:0.45,
+          mixBlendMode:"luminosity",
+        }}/>
+      </div>
+
       {/* BODY */}
       <div className="flex-1 flex flex-col overflow-hidden"
         style={{background:"rgba(255,250,244,0.72)",backdropFilter:"blur(1px)"}}>
@@ -159,15 +172,12 @@ export default function Home() {
           {/* WELCOME */}
           {messages.length===0&&(
             <div className="h-full flex flex-col items-center justify-center px-6 py-8">
-
-              {/* Logo */}
               <div className="mb-5 relative">
                 <div className="absolute inset-0 rounded-full blur-2xl opacity-40"
                   style={{background:"radial-gradient(circle,#E8C06A,transparent)",transform:"scale(1.5)"}}/>
                 <BirdLogo size={96}/>
               </div>
 
-              {/* Title */}
               <h2 className="text-3xl font-bold mb-2 text-center"
                 style={{color:"#5C1010",textShadow:"0 1px 4px rgba(92,16,16,0.15)"}}>
                 Xin chào! Tôi có thể giúp gì cho bạn?
@@ -179,7 +189,6 @@ export default function Home() {
                 Giấy tờ cần chuẩn bị · Trình tự thực hiện · Thời hạn giải quyết
               </p>
 
-              {/* Badges */}
               <div className="flex gap-3 mb-8 flex-wrap justify-center">
                 {[{icon:Zap,text:"Nhanh chóng"},{icon:CheckCircle,text:"Chính xác"},{icon:Heart,text:"Thuận tiện"}].map(({icon:Icon,text})=>(
                   <div key={text} className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold"
@@ -189,11 +198,10 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Suggestions — 2×2 grid */}
               <div className="grid grid-cols-2 gap-3 w-full max-w-2xl">
                 {SUGGESTIONS.map(({icon:Icon,text,sub})=>(
                   <button key={text} onClick={()=>sendMessage(text+"?")} disabled={loading}
-                    className="flex items-start gap-3 p-4 rounded-2xl text-left transition-all duration-200 disabled:opacity-50 group"
+                    className="flex items-start gap-3 p-4 rounded-2xl text-left transition-all duration-200 disabled:opacity-50"
                     style={{background:"rgba(255,255,255,0.88)",border:"1.5px solid rgba(212,168,67,0.35)",backdropFilter:"blur(4px)",boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}
                     onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.98)";el.style.borderColor="#C9973C";el.style.boxShadow="0 6px 20px rgba(201,151,60,0.25)";el.style.transform="translateY(-2px)";}}
                     onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.88)";el.style.borderColor="rgba(212,168,67,0.35)";el.style.boxShadow="0 2px 12px rgba(0,0,0,0.07)";el.style.transform="translateY(0)";}}>
