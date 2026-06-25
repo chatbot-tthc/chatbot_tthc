@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # Gemini (chỉ dùng cho LLM sinh câu trả lời)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash-lite"
+    GEMINI_MODEL: str = "gemini-2.5-flash"       
 
     # Embedding model (local, chạy bằng sentence-transformers)
     EMBEDDING_MODEL: str = "intfloat/multilingual-e5-base"
