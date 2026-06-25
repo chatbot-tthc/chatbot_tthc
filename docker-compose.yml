@@ -54,6 +54,7 @@ services:
       - ./data:/app/data
       - ./backend/pdf_data:/app/pdf_data:ro
       - ./scripts:/scripts
+
 volumes:
   postgres_data:
   chroma_data:
