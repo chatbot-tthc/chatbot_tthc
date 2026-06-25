@@ -22,9 +22,13 @@ class Settings(BaseSettings):
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
+     # GCP Vertex AI
+    GCP_PROJECT: str = "vocal-door-443401-g3"
+    GCP_LOCATION: str = "us-central1"   # hoặc "asia-southeast1" nếu hỗ trợ
+
     # Gemini (chỉ dùng cho LLM sinh câu trả lời)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash-lite"
 
     # Embedding model (local, chạy bằng sentence-transformers)
     EMBEDDING_MODEL: str = "intfloat/multilingual-e5-base"

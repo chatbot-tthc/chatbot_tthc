@@ -1,7 +1,7 @@
 """
 RAG Pipeline — Optimized
 Luồng: Embed → Retrieve (ChromaDB) → Reranker → Fallback Handler → Gemini Pro
-Tối ưu: bỏ multi-query Gemini, dùng simple query expansion, giảm latency ~70%
+Sử dụng Vertex AI với google-genai SDK
 """
 
 import chromadb
@@ -10,10 +10,14 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.core.config import settings
 import math
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai
 
-vertexai.init(project="vocal-door-443401-g3", location="asia-southeast1")
+# Khởi tạo client Vertex AI
+client = genai.Client(
+    vertexai=True,
+    project=settings.GCP_PROJECT,
+    location=settings.GCP_LOCATION,
+)
 
 embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
 reranker_model = CrossEncoder(settings.RERANKER_MODEL, max_length=512)
@@ -43,37 +47,24 @@ LƯU Ý: Phần "TÀI LIỆU PDF GỐC" là nguồn chính thức nhất."""
 
 
 def _sigmoid(x: float) -> float:
-    """Normalize cross-encoder score về 0-1"""
     return 1 / (1 + math.exp(-x))
 
 
 def _expand_query(question: str) -> list[str]:
-    """
-    Query expansion đơn giản, không dùng API — chỉ thêm prefix/suffix
-    để tăng khả năng match với chunk có format 'Thủ tục: ...'
-    """
     q = question.strip()
     queries = [q]
-
-    # Thêm prefix "thủ tục" nếu chưa có
     q_lower = q.lower()
     if not any(kw in q_lower for kw in ["thủ tục", "hồ sơ", "giấy tờ", "quy trình"]):
         queries.append(f"thủ tục {q}")
-
-    # Thêm dạng query tìm hồ sơ
     if "giấy tờ" in q_lower or "hồ sơ" in q_lower or "cần gì" in q_lower:
         queries.append(f"thành phần hồ sơ {q}")
-
-    # Thêm dạng query tìm trình tự
     if "bước" in q_lower or "như thế nào" in q_lower or "quy trình" in q_lower:
         queries.append(f"trình tự thực hiện {q}")
-
-    return queries[:3]  # Tối đa 3 queries
+    return queries[:3]
 
 
 class RAGPipeline:
     def __init__(self):
-        self.llm = genai.GenerativeModel(settings.GEMINI_MODEL)
         self._chroma_client = None
         self._collection = None
 
@@ -95,16 +86,10 @@ class RAGPipeline:
             normalize_embeddings=True,
         ).tolist()
 
-    def _retrieve(self, question: str) -> tuple[list, list, list]:
-        """
-        Retrieve với simple query expansion (không dùng Gemini).
-        Merge kết quả từ nhiều queries, dedup theo document content.
-        """
+    def _retrieve(self, question: str):
         collection = self._get_collection()
         queries = _expand_query(question)
-
-        seen_contents = {}  # content -> (distance, metadata)
-
+        seen_contents = {}
         for q in queries:
             q_embedding = self._embed_query(q)
             results = collection.query(
@@ -115,23 +100,17 @@ class RAGPipeline:
             docs = results["documents"][0] if results["documents"] else []
             dists = results["distances"][0] if results["distances"] else []
             metas = results["metadatas"][0] if results["metadatas"] else []
-
             for doc, dist, meta in zip(docs, dists, metas):
                 if doc not in seen_contents:
                     seen_contents[doc] = (dist, meta)
                 else:
-                    # Giữ kết quả có distance thấp hơn (tương đồng hơn)
                     if dist < seen_contents[doc][0]:
                         seen_contents[doc] = (dist, meta)
-
-        # Sort theo distance tăng dần
         sorted_items = sorted(seen_contents.items(), key=lambda x: x[1][0])
         top = sorted_items[:settings.RETRIEVAL_TOP_K]
-
         chunks = [item[0] for item in top]
         distances = [item[1][0] for item in top]
         metadatas = [item[1][1] for item in top]
-
         return chunks, distances, metadatas
 
     def _rerank(self, query: str, chunks: list[str]) -> list[tuple]:
@@ -167,7 +146,6 @@ class RAGPipeline:
         if not distances:
             return True
         best = min(distances)
-        # Ngưỡng thoải hơn: 0.65 thay vì 0.5
         return best > (1 - 0.35)
 
     def _build_prompt(self, question: str, chunks: list[str], pdf_docs: list[dict]) -> str:
@@ -180,7 +158,6 @@ class RAGPipeline:
                 [f"PDF - {doc['ten_thu_tuc']}:\n{doc['text']}" for doc in pdf_docs]
             )
             pdf_context = f"\n\n=== TÀI LIỆU PDF GỐC ===\n{pdf_blocks}"
-
         return f"""{SYSTEM_PROMPT}
 
 === TÀI LIỆU THAM KHẢO ===
@@ -192,10 +169,8 @@ class RAGPipeline:
 === TRẢ LỜI ==="""
 
     async def query(self, question: str) -> dict:
-        # Bước 1: Retrieve với query expansion đơn giản
         chunks, distances, metadatas = self._retrieve(question)
 
-        # Bước 2: Fallback check
         if self._check_fallback(distances):
             return {
                 "answer": FALLBACK_MESSAGE,
@@ -205,11 +180,9 @@ class RAGPipeline:
                 "retrieved_chunks": [],
             }
 
-        # Bước 3: Rerank
         reranked = self._rerank(question, chunks)
         top_chunks = [c for c, _, _ in reranked]
 
-        # Bước 4: Lấy PDF nếu có
         pdf_docs = []
         seen_ma = set()
         for _, _, orig_idx in reranked:
@@ -223,12 +196,15 @@ class RAGPipeline:
                 if pdf_text:
                     pdf_docs.append({"ten_thu_tuc": ten, "text": pdf_text})
 
-        # Bước 5: Gemini sinh câu trả lời
         prompt = self._build_prompt(question, top_chunks, pdf_docs)
-        response = self.llm.generate_content(prompt)
+
+        # Gọi Vertex AI bằng client.models.generate_content
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=prompt,
+        )
         answer = response.text
 
-        # Format retrieved_chunks với score normalize về 0-1
         retrieved_chunks = []
         for chunk, ce_score, orig_idx in reranked:
             meta = metadatas[orig_idx] if orig_idx < len(metadatas) else {}
