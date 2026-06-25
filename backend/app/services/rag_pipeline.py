@@ -4,15 +4,16 @@ Luồng: Embed → Retrieve (ChromaDB) → Reranker → Fallback Handler → Gem
 Tối ưu: bỏ multi-query Gemini, dùng simple query expansion, giảm latency ~70%
 """
 
-import google.generativeai as genai
 import chromadb
 import pdfplumber
 from pathlib import Path
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.core.config import settings
 import math
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
+vertexai.init(project="vocal-door-443401-g3", location="asia-southeast1")
 
 embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
 reranker_model = CrossEncoder(settings.RERANKER_MODEL, max_length=512)
