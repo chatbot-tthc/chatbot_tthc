@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent  # chatbot-tthc/
 load_dotenv(ROOT_DIR / ".env")
 
-RAW_DIR = Path(__file__).resolve().parent.parent / "crawler" / "data" / "raw"
+RAW_DIR = Path("/scripts/crawler/data/raw")
 
 EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
 CHROMA_HOST = os.environ.get("CHROMA_HOST", "chromadb")
