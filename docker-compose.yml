@@ -52,7 +52,7 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/app/data
-      - ./scripts/crawler/data/pdf:/app/pdf_data:ro
+      - ./backend/pdf_data:/app/pdf_data:ro
       - ./scripts:/scripts
 volumes:
   postgres_data:
