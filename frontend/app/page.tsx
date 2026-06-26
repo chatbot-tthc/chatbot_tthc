@@ -119,7 +119,7 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
             {chunk.content}
           </div>
 
-          {/* 🔥 HIỂN THỊ PDF NẾU CÓ */}
+          {/* HIỂN THỊ PDF NẾU CÓ*/}
           {chunk.pdf_content && (
             <div className="mt-4">
               <p className="text-xs font-bold tracking-widest mb-2" style={{ color: "#7B1818" }}>
@@ -179,7 +179,7 @@ function ChunkChip({ chunk }: { chunk: RetrievedChunk }) {
   );
 }
 
-// ── MAIN PAGE ────────────────────────────────────────────────────────────────
+// ── MAIN PAGE ──────
 export default function Home() {
   const [sessionId, setSessionId]       = useState<string | null>(null);
   const [messages, setMessages]         = useState<ChatMessage[]>([]);
@@ -459,7 +459,7 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* ── NGUỒN THAM KHẢO — bấm vào xem nội dung chunk ── */}
+                      {/* ── NGUỒN THAM KHẢO — bấm vào xem nội dung chunk va pdf ── */}
                       {msg.role === "assistant" && msg.retrieved_chunks && msg.retrieved_chunks.length > 0 && !msg.is_fallback && (
                         <details className="mt-3" open>
                           <summary className="cursor-pointer text-xs font-bold select-none flex items-center gap-1.5"
