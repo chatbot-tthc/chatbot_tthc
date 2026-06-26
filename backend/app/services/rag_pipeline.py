@@ -60,7 +60,19 @@ def _expand_query(question: str) -> list[str]:
         queries.append(f"thành phần hồ sơ {q}")
     if "bước" in q_lower or "như thế nào" in q_lower or "quy trình" in q_lower:
         queries.append(f"trình tự thực hiện {q}")
-    return queries[:3]
+    
+    # Ưu tiên cho kết hôn trong nước
+    if "kết hôn" in q_lower and "nước ngoài" not in q_lower:
+        queries.append("đăng ký kết hôn trong nước")
+        queries.append("hồ sơ đăng ký kết hôn")
+        queries.append("giấy tờ đăng ký kết hôn")
+    
+    # Ưu tiên cho hộ chiếu
+    if "hộ chiếu" in q_lower or "passport" in q_lower:
+        queries.append("thủ tục cấp hộ chiếu")
+        queries.append("hồ sơ làm hộ chiếu")
+    
+    return queries[:5]
 
 
 class RAGPipeline:
@@ -205,15 +217,23 @@ class RAGPipeline:
         )
         answer = response.text
 
+        # Format retrieved_chunks với pdf_content
         retrieved_chunks = []
         for chunk, ce_score, orig_idx in reranked:
             meta = metadatas[orig_idx] if orig_idx < len(metadatas) else {}
             norm_score = round(_sigmoid(ce_score), 3)
+            
+            # Lấy pdf_content nếu có
+            ma = meta.get("ma_thu_tuc", "")
+            bo_nganh = meta.get("bo_nganh", "")
+            pdf_text = self._extract_pdf_text(ma, bo_nganh) if ma else ""
+            
             retrieved_chunks.append({
                 "content": chunk[:300] + "..." if len(chunk) > 300 else chunk,
                 "document_title": meta.get("ten_thu_tuc", ""),
-                "ma_thu_tuc": meta.get("ma_thu_tuc", ""),
+                "ma_thu_tuc": ma,
                 "score": norm_score,
+                "pdf_content": pdf_text[:500] + "..." if len(pdf_text) > 500 else pdf_text,
             })
 
         return {

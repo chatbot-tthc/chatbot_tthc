@@ -38,6 +38,7 @@ interface RetrievedChunk {
   document_title: string;
   ma_thu_tuc: string;
   score: number;
+  pdf_content?: string;
 }
 
 interface ChatMessage {
@@ -90,7 +91,6 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
             </div>
           </div>
           <div className="flex items-center gap-2 ml-3 shrink-0">
-            {/* Score badge */}
             <div className="px-2.5 py-1 rounded-full text-xs font-bold"
               style={{ background: "rgba(255,255,255,0.15)", color: "#E8C06A" }}>
               Độ liên quan: <span style={{ color: scoreColor === "#22c55e" ? "#86efac" : scoreColor === "#f59e0b" ? "#fcd34d" : "#fca5a5" }}>{scorePercent}%</span>
@@ -118,6 +118,26 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
             }}>
             {chunk.content}
           </div>
+
+          {/* 🔥 HIỂN THỊ PDF NẾU CÓ */}
+          {chunk.pdf_content && (
+            <div className="mt-4">
+              <p className="text-xs font-bold tracking-widest mb-2" style={{ color: "#7B1818" }}>
+                📎 NỘI DUNG FILE PDF GỐC
+              </p>
+              <div className="rounded-2xl p-3 text-xs leading-relaxed whitespace-pre-wrap"
+                style={{
+                  background: "#FFF5E6",
+                  border: "1px solid #E8C06A",
+                  color: "#3D1A0E",
+                  maxHeight: "150px",
+                  overflowY: "auto"
+                }}>
+                {chunk.pdf_content}
+              </div>
+            </div>
+          )}
+
           <p className="text-xs mt-3 text-center" style={{ color: "#B8956A" }}>
             Nhấn bên ngoài hoặc phím Esc để đóng
           </p>
