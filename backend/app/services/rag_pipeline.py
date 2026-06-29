@@ -130,10 +130,17 @@ class RAGPipeline:
             return []
         pairs = [[query, chunk] for chunk in chunks]
         ce_scores = reranker_model.predict(pairs)
-        combined = [
-            (chunk, float(score), idx)
-            for idx, (chunk, score) in enumerate(zip(chunks, ce_scores))
-        ]
+        
+        q_lower = query.lower()
+        
+        combined = []
+        for idx, (chunk, score) in enumerate(zip(chunks, ce_scores)):
+            adjusted = float(score)
+            chunk_lower = chunk.lower()
+            if ("nước ngoài" in chunk_lower or "yếu tố nước ngoài" in chunk_lower):
+                if "nước ngoài" not in q_lower:
+                    adjusted -= 2.0
+            combined.append((chunk, adjusted, idx))
         combined.sort(key=lambda x: x[1], reverse=True)
         return combined[:settings.RERANKER_TOP_N]
 
