@@ -45,6 +45,10 @@ QUY TẮC TRẢ LỜI:
 
 LƯU Ý: Phần "TÀI LIỆU PDF GỐC" là nguồn chính thức nhất."""
 
+# Từ khóa detect intent
+_NOP_KW = ["nộp hồ sơ", "nộp đơn", "đăng ký", "xin cấp", "làm thủ tục", "thực hiện thủ tục"]
+_TRA_KW = ["tra cứu", "kiểm tra tiến độ", "xem kết quả", "hồ sơ của tôi", "tình trạng hồ sơ"]
+
 
 def _sigmoid(x: float) -> float:
     return 1 / (1 + math.exp(-x))
@@ -60,19 +64,38 @@ def _expand_query(question: str) -> list[str]:
         queries.append(f"thành phần hồ sơ {q}")
     if "bước" in q_lower or "như thế nào" in q_lower or "quy trình" in q_lower:
         queries.append(f"trình tự thực hiện {q}")
-    
-    # Ưu tiên cho kết hôn trong nước
     if "kết hôn" in q_lower and "nước ngoài" not in q_lower:
         queries.append("đăng ký kết hôn trong nước")
         queries.append("hồ sơ đăng ký kết hôn")
         queries.append("giấy tờ đăng ký kết hôn")
-    
-    # Ưu tiên cho hộ chiếu
     if "hộ chiếu" in q_lower or "passport" in q_lower:
         queries.append("thủ tục cấp hộ chiếu")
         queries.append("hồ sơ làm hộ chiếu")
-    
     return queries[:5]
+
+
+def _detect_action_buttons(question: str, answer: str) -> list[dict]:
+    text = (question + " " + answer).lower()
+    buttons = []
+    if any(kw in text for kw in _NOP_KW):
+        buttons.append({
+            "label": "🗂️ Nộp hồ sơ trực tuyến",
+            "url": "https://dichvucong.gov.vn/p/home/dvc-toan-trinh.html",
+            "type": "primary"
+        })
+    if any(kw in text for kw in _TRA_KW):
+        buttons.append({
+            "label": "🔍 Tra cứu tình trạng hồ sơ",
+            "url": "https://dichvucong.gov.vn/p/home/dvc-tra-cuu-ho-so.html",
+            "type": "secondary"
+        })
+    if not buttons:
+        buttons.append({
+            "label": "🌐 Xem trên Cổng Dịch vụ công",
+            "url": "https://dichvucong.gov.vn/",
+            "type": "secondary"
+        })
+    return buttons
 
 
 class RAGPipeline:
@@ -130,9 +153,7 @@ class RAGPipeline:
             return []
         pairs = [[query, chunk] for chunk in chunks]
         ce_scores = reranker_model.predict(pairs)
-        
         q_lower = query.lower()
-        
         combined = []
         for idx, (chunk, score) in enumerate(zip(chunks, ce_scores)):
             adjusted = float(score)
@@ -197,6 +218,7 @@ class RAGPipeline:
                 "chunks": [],
                 "scores": [],
                 "retrieved_chunks": [],
+                "action_buttons": [],
             }
 
         reranked = self._rerank(question, chunks)
@@ -217,24 +239,19 @@ class RAGPipeline:
 
         prompt = self._build_prompt(question, top_chunks, pdf_docs)
 
-        # Gọi Vertex AI bằng client.models.generate_content
         response = client.models.generate_content(
             model=settings.GEMINI_MODEL,
             contents=prompt,
         )
         answer = response.text
 
-        # Format retrieved_chunks với pdf_content
         retrieved_chunks = []
         for chunk, ce_score, orig_idx in reranked:
             meta = metadatas[orig_idx] if orig_idx < len(metadatas) else {}
             norm_score = round(_sigmoid(ce_score), 3)
-            
-            # Lấy pdf_content nếu có
             ma = meta.get("ma_thu_tuc", "")
             bo_nganh = meta.get("bo_nganh", "")
             pdf_text = self._extract_pdf_text(ma, bo_nganh) if ma else ""
-            
             retrieved_chunks.append({
                 "content": chunk[:300] + "..." if len(chunk) > 300 else chunk,
                 "document_title": meta.get("ten_thu_tuc", ""),
@@ -243,10 +260,13 @@ class RAGPipeline:
                 "pdf_content": pdf_text[:500] + "..." if len(pdf_text) > 500 else pdf_text,
             })
 
+        action_buttons = _detect_action_buttons(question, answer)
+
         return {
             "answer": answer,
             "is_fallback": False,
             "chunks": top_chunks,
             "scores": [round(_sigmoid(s), 3) for _, s, _ in reranked],
             "retrieved_chunks": retrieved_chunks,
+            "action_buttons": action_buttons,
         }
