@@ -23,7 +23,12 @@ class RetrievedChunk(BaseModel):
     document_title: str
     ma_thu_tuc: Optional[str] = None
     score: float
+    pdf_content: Optional[str] = None
 
+class ActionButton(BaseModel):         
+    label: str
+    url: str
+    type: str
 
 class ChatResponse(BaseModel):
     session_id: UUID
@@ -31,6 +36,7 @@ class ChatResponse(BaseModel):
     is_fallback: bool = False
     retrieved_chunks: List[RetrievedChunk] = []
     response_time_ms: int
+    action_buttons: List[ActionButton] = []
 
 
 # ── Session ────────────────────────────────────────────

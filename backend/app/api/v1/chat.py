@@ -90,4 +90,5 @@ async def chat(
         is_fallback=result.get("is_fallback", False),
         retrieved_chunks=result.get("retrieved_chunks", []),
         response_time_ms=response_time,
+        action_buttons=result.get("action_buttons", []),
     )
