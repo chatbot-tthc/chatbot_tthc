@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import {
   ArrowLeft, RefreshCw, MessageSquare,
-  Users, AlertTriangle, Clock,
+  Users, AlertTriangle, Clock, FileText, CheckCircle, XCircle, Timer,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, Label, ResponsiveContainer,
@@ -23,12 +23,51 @@ interface StatsData {
   daily_questions: { date: string; count: number }[];
 }
 
+// ── DỮ LIỆU LÁI THIÊU (tháng 6/2026) ──────────────────────────────────────
+const LT_TOTAL = 801;
+const LT_OVERDUE = 110;
+const LT_ON_TIME = 691;
+const LT_DONE = 40;
+const LT_WAITING = 46;
+
+const LT_STATUS = [
+  { name: "Đã hủy",                    value: 663, color: "#888780" },
+  { name: "Chờ tiếp nhận",             value: 45,  color: "#2a78d6" },
+  { name: "Đã trả kết quả",            value: 40,  color: "#1baf7a" },
+  { name: "Từ chối chuyên ngành",      value: 26,  color: "#e34948" },
+  { name: "Dừng xử lý",                value: 17,  color: "#eda100" },
+  { name: "Chờ bổ sung / Tạm dừng",   value: 9,   color: "#4a3aa7" },
+  { name: "Đang xử lý",                value: 1,   color: "#1baf7a" },
+];
+
+const LT_SECTORS = [
+  { name: "Đất đai",          count: 238 },
+  { name: "Hộ tịch",          count: 167 },
+  { name: "Hộ kinh doanh",    count: 77  },
+  { name: "Người có công",    count: 76  },
+  { name: "Hợp tác xã",       count: 25  },
+  { name: "Tín ngưỡng",       count: 21  },
+];
+
+const LT_PROCS = [
+  { name: "Đính chính GCN đã cấp có sai sót",       count: 93 },
+  { name: "Giao/cho thuê đất, chuyển MĐ SDĐ",       count: 92 },
+  { name: "Đăng ký đất đai, cấp GCN QSDĐ lần đầu", count: 51 },
+  { name: "Đăng ký thành lập hộ kinh doanh",        count: 47 },
+  { name: "Cấp GXN tình trạng hôn nhân",            count: 46 },
+];
+
+const LT_OVERDUE_DATA = [
+  { name: "Đúng hạn", value: LT_ON_TIME, color: "#1baf7a" },
+  { name: "Trễ hạn",  value: LT_OVERDUE, color: "#e34948" },
+];
+
 function KpiCard({ icon, label, value, sub, accent }: {
   icon: React.ReactNode; label: string; value: string; sub?: string; accent: string;
 }) {
   return (
     <div className="rounded-2xl p-5 flex items-center gap-4"
-      style={{ background:"rgba(255,255,255,0.92)", border:`1.5px solid rgba(201,151,60,0.25)`, boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
+      style={{ background:"rgba(255,255,255,0.92)", border:"1.5px solid rgba(201,151,60,0.25)", boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
       <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
         style={{ background: accent }}>
         {icon}
@@ -38,6 +77,19 @@ function KpiCard({ icon, label, value, sub, accent }: {
         <p className="text-2xl font-bold" style={{ color:"#3D1A0E" }}>{value}</p>
         {sub && <p className="text-xs mt-0.5" style={{ color:"#B8956A" }}>{sub}</p>}
       </div>
+    </div>
+  );
+}
+
+function SectionDivider({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div className="flex items-center gap-4 mt-8 mb-2">
+      <div className="flex-1 h-px" style={{ background: "linear-gradient(to right, rgba(201,151,60,0.5), transparent)" }} />
+      <div className="text-center">
+        <p className="text-sm font-bold tracking-widest" style={{ color: "#7B1818" }}>{title}</p>
+        <p className="text-xs mt-0.5" style={{ color: "#B8956A" }}>{sub}</p>
+      </div>
+      <div className="flex-1 h-px" style={{ background: "linear-gradient(to left, rgba(201,151,60,0.5), transparent)" }} />
     </div>
   );
 }
@@ -68,7 +120,6 @@ export default function DashboardPage() {
   ] : [];
   const PIE_COLORS = ["#7B1818","#C9973C"];
   const avgSeconds = data ? (data.avg_response_time_ms / 1000).toFixed(1) : "—";
-
   const tooltipStyle = { borderRadius:"12px", border:"1px solid #E8C06A", fontSize:"12px" };
 
   return (
@@ -133,6 +184,9 @@ export default function DashboardPage() {
 
         {data && (
           <>
+            {/* ══ PHẦN 1: CHATBOT STATS ══ */}
+            <SectionDivider title="THỐNG KÊ CHATBOT AI" sub="Dữ liệu hoạt động thời gian thực từ hệ thống RAG" />
+
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard icon={<Users className="w-5 h-5 text-white"/>}
@@ -214,7 +268,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Bar Chart */}
+            {/* Bar Chart Chatbot */}
             <div className="rounded-2xl p-5"
               style={{ background:"rgba(255,255,255,0.92)", border:"1.5px solid rgba(201,151,60,0.2)",
                        boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
@@ -247,8 +301,133 @@ export default function DashboardPage() {
               )}
             </div>
 
+            {/* ══ PHẦN 2: HỒ SƠ LÁI THIÊU ══ */}
+            <SectionDivider title="HỒ SƠ HÀNH CHÍNH — PHƯỜNG LÁI THIÊU" sub="Dữ liệu thực tế tháng 6/2026 · 801 hồ sơ · Nguồn: motcuahcm.gov.vn" />
+
+            {/* KPI Cards Lái Thiêu */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard icon={<FileText className="w-5 h-5 text-white"/>}
+                accent="linear-gradient(135deg,#7B1818,#9B2020)"
+                label="Tổng hồ sơ" value={LT_TOTAL.toString()} sub="tháng 6/2026"/>
+              <KpiCard icon={<CheckCircle className="w-5 h-5 text-white"/>}
+                accent="linear-gradient(135deg,#1baf7a,#0F6E56)"
+                label="Đã trả kết quả" value={LT_DONE.toString()} sub={`${((LT_DONE/LT_TOTAL)*100).toFixed(1)}% tổng hồ sơ`}/>
+              <KpiCard icon={<XCircle className="w-5 h-5 text-white"/>}
+                accent="linear-gradient(135deg,#A32D2D,#e34948)"
+                label="Trễ hạn" value={LT_OVERDUE.toString()} sub={`${((LT_OVERDUE/LT_TOTAL)*100).toFixed(1)}% tổng hồ sơ`}/>
+              <KpiCard icon={<Timer className="w-5 h-5 text-white"/>}
+                accent="linear-gradient(135deg,#185FA5,#2a78d6)"
+                label="Chờ tiếp nhận" value={LT_WAITING.toString()} sub="đang chờ xử lý"/>
+            </div>
+
+            {/* Biểu đồ trạng thái + đúng hạn/trễ hạn */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Donut trạng thái */}
+              <div className="rounded-2xl p-5"
+                style={{ background:"rgba(255,255,255,0.92)", border:"1.5px solid rgba(201,151,60,0.2)",
+                         boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
+                <h2 className="text-sm font-bold tracking-wide mb-1" style={{ color:"#7B1818" }}>
+                  PHÂN BỔ TRẠNG THÁI HỒ SƠ
+                </h2>
+                <p className="text-xs mb-3" style={{ color:"#B8956A" }}>Tổng 801 hồ sơ</p>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={LT_STATUS} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                      paddingAngle={2} dataKey="value">
+                      {LT_STATUS.map((s,i)=><Cell key={i} fill={s.color}/>)}
+                    </Pie>
+                    <Tooltip formatter={(v:unknown)=>[`${Number(v)||0} hồ sơ`, ""]}
+                      contentStyle={tooltipStyle}/>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center">
+                  {LT_STATUS.map((s,i)=>(
+                    <div key={i} className="flex items-center gap-1 text-xs" style={{ color:"#5A3A1A" }}>
+                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background:s.color }}/>
+                      {s.name} ({s.value})
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Đúng hạn / Trễ hạn */}
+              <div className="rounded-2xl p-5"
+                style={{ background:"rgba(255,255,255,0.92)", border:"1.5px solid rgba(201,151,60,0.2)",
+                         boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
+                <h2 className="text-sm font-bold tracking-wide mb-1" style={{ color:"#7B1818" }}>
+                  TỶ LỆ ĐÚNG HẠN / TRỄ HẠN
+                </h2>
+                <p className="text-xs mb-3" style={{ color:"#B8956A" }}>Dựa trên trường overDueByUser</p>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={LT_OVERDUE_DATA} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                      paddingAngle={3} dataKey="value">
+                      {LT_OVERDUE_DATA.map((d,i)=><Cell key={i} fill={d.color}/>)}
+                      <Label value="86.3%" position="center" fill="#1baf7a" fontSize={26} fontWeight="bold"/>
+                    </Pie>
+                    <Tooltip formatter={(v:unknown)=>[`${Number(v)||0} hồ sơ`,""]}
+                      contentStyle={tooltipStyle}/>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex items-center justify-center gap-6 mt-2">
+                  {LT_OVERDUE_DATA.map((d,i)=>(
+                    <div key={i} className="flex items-center gap-1.5 text-xs" style={{ color:"#5A3A1A" }}>
+                      <span className="w-3 h-3 rounded-full" style={{ background:d.color }}/>
+                      {d.name} ({d.value}) · {((d.value/LT_TOTAL)*100).toFixed(1)}%
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Biểu đồ lĩnh vực + top thủ tục */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Lĩnh vực */}
+              <div className="rounded-2xl p-5"
+                style={{ background:"rgba(255,255,255,0.92)", border:"1.5px solid rgba(201,151,60,0.2)",
+                         boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
+                <h2 className="text-sm font-bold tracking-wide mb-4" style={{ color:"#7B1818" }}>
+                  HỒ SƠ THEO LĨNH VỰC
+                </h2>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={LT_SECTORS} layout="vertical"
+                    margin={{ left:10, right:40, top:5, bottom:5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F5E8D5"/>
+                    <XAxis type="number" tick={{ fontSize:11, fill:"#9B7B5A" }} allowDecimals={false}/>
+                    <YAxis type="category" dataKey="name" width={120}
+                      tick={{ fontSize:11, fill:"#5A3A1A" }}/>
+                    <Tooltip formatter={(v:unknown)=>[`${Number(v)||0} hồ sơ`,""]}
+                      contentStyle={tooltipStyle}/>
+                    <Bar dataKey="count" radius={[0,6,6,0]} fill="#2a78d6" name="Hồ sơ"/>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Top thủ tục */}
+              <div className="rounded-2xl p-5"
+                style={{ background:"rgba(255,255,255,0.92)", border:"1.5px solid rgba(201,151,60,0.2)",
+                         boxShadow:"0 2px 12px rgba(0,0,0,0.07)" }}>
+                <h2 className="text-sm font-bold tracking-wide mb-4" style={{ color:"#7B1818" }}>
+                  TOP 5 THỦ TỤC ĐƯỢC NỘP NHIỀU NHẤT
+                </h2>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={LT_PROCS} layout="vertical"
+                    margin={{ left:10, right:40, top:5, bottom:5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F5E8D5"/>
+                    <XAxis type="number" tick={{ fontSize:11, fill:"#9B7B5A" }} allowDecimals={false}/>
+                    <YAxis type="category" dataKey="name" width={180}
+                      tick={{ fontSize:11, fill:"#5A3A1A" }}
+                      tickFormatter={(v:string)=>v.length>28?v.slice(0,28)+"…":v}/>
+                    <Tooltip formatter={(v:unknown)=>[`${Number(v)||0} hồ sơ`,""]}
+                      contentStyle={tooltipStyle}/>
+                    <Bar dataKey="count" radius={[0,6,6,0]} fill="#C9973C" name="Hồ sơ"/>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             <p className="text-center text-xs pb-4" style={{ color:"#B8956A" }}>
-              ✦ Dữ liệu cập nhật theo thời gian thực từ hệ thống chatbot TTHC — VNPT TP.HCM
+              ✦ Chatbot: dữ liệu thời gian thực · Lái Thiêu: dữ liệu tháng 6/2026 từ motcuahcm.gov.vn — VNPT TP.HCM
             </p>
           </>
         )}
