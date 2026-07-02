@@ -313,9 +313,6 @@ export default function DashboardHosoPage() {
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
-          <p className="text-[10px]" style={{ color: "#B8956A" }}>
-            Anh hướng dẫn sẽ bổ sung thêm data các cơ quan khác
-          </p>
         </div>
 
         {loading && !hoso && (
