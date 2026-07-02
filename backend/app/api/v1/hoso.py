@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
 
-DATA_PATH = Path(__file__).parent.parent.parent.parent / "data" / "lai_thieu_motcuahcm_dossiers.json"
+DATA_PATH = Path(__file__).parent.parent.parent.parent / "data" / "ho_so_data.json"
 
 
 def _load_data():
