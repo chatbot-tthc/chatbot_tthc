@@ -1,12 +1,12 @@
 """
-API endpoint: /api/v1/hoso/lai-thieu
+API endpoint: /api/v1/hoso/
 Đọc dữ liệu hồ sơ phường Lái Thiêu từ file JSON và trả về thống kê tổng hợp
 """
 import json
 from pathlib import Path
 from collections import Counter, defaultdict
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 router = APIRouter()
 
@@ -99,4 +99,86 @@ def get_lai_thieu_stats():
         "top_procedures": top_procedures,
         "daily_list": daily_list,
         "overdue_by_sector": overdue_sector_list,
+    }
+
+
+@router.get("/list", tags=["Hồ sơ"])
+def get_hoso_list(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    phuong: str = Query("lai-thieu"),
+    linh_vuc: str = Query(""),
+    ten_thu_tuc: str = Query(""),
+    trang_thai: str = Query(""),
+    trang_thai_nhom: str = Query(""),  # "dung_han" | "tre_han" | ""
+):
+    """
+    Danh sách hồ sơ có phân trang và filter.
+    Dùng cho popup interactive chart trên Dashboard Hồ Sơ.
+    """
+    data = _load_data()
+
+    # ── FILTER ──────────────────────────────────────────────────────────────
+    filtered = data
+
+    # Filter lĩnh vực
+    if linh_vuc:
+        filtered = [d for d in filtered if linh_vuc.lower() in d.get("sectorName", "").lower()]
+
+    # Filter tên thủ tục
+    if ten_thu_tuc:
+        filtered = [d for d in filtered if ten_thu_tuc.lower() in d.get("procedureName", "").lower()]
+
+    # Filter trạng thái cụ thể
+    if trang_thai:
+        filtered = [d for d in filtered if d.get("dossierStatusName", "") == trang_thai]
+
+    # Filter nhóm đúng hạn / trễ hạn
+    if trang_thai_nhom == "tre_han":
+        filtered = [d for d in filtered if d.get("overDueByUser", "").strip()]
+    elif trang_thai_nhom == "dung_han":
+        filtered = [d for d in filtered if not d.get("overDueByUser", "").strip()]
+
+    # ── PHÂN TRANG ──────────────────────────────────────────────────────────
+    total = len(filtered)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_data = filtered[start:end]
+
+    # ── FORMAT KẾT QUẢ ──────────────────────────────────────────────────────
+    items = []
+    for d in page_data:
+        # Parse ngày nộp
+        ngay_nop = d.get("acceptedDate", "")
+        try:
+            ngay_nop = datetime.strptime(ngay_nop[:10], "%d/%m/%Y").strftime("%d/%m/%Y")
+        except Exception:
+            pass
+
+        # Tính hạn xử lý từ overDueByUser hoặc dùng field khác
+        han_xu_ly = d.get("lastModifiedDate", "")
+        try:
+            han_xu_ly = datetime.strptime(han_xu_ly[:10], "%d/%m/%Y").strftime("%d/%m/%Y")
+        except Exception:
+            han_xu_ly = "—"
+
+        # Tên thủ tục rút gọn
+        ten = d.get("procedureName", "")
+
+        items.append({
+            "id": d.get("dossierNo") or d.get("dossierId", f"HS-{start + len(items) + 1:04d}"),
+            "ten_thu_tuc": ten,
+            "trang_thai": d.get("dossierStatusName", ""),
+            "linh_vuc": d.get("sectorName", ""),
+            "ngay_nop": ngay_nop,
+            "han_xu_ly": han_xu_ly,
+            "is_overdue": bool(d.get("overDueByUser", "").strip()),
+        })
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+        "items": items,
     }
