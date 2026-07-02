@@ -122,7 +122,7 @@ export default function DashboardPage() {
             <ArrowLeft className="w-4 h-4 text-white" />
           </Link>
           <div>
-            <h1 className="text-white font-bold text-lg tracking-widest drop-shadow">📊 DASHBOARD HỆ THỐNG AI</h1>
+            <h1 className="text-white font-bold text-lg tracking-widest drop-shadow">DASHBOARD HỆ THỐNG AI</h1>
             <p className="text-[10px] tracking-wider" style={{ color: "#E8C06A" }}>Phân tích hiệu suất xử lý hồ sơ & chatbot — VNPT TP.HCM</p>
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
             {/* ── BIỂU ĐỒ CHATBOT ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>🎯 CHATBOT: TỶ LỆ TRẢ LỜI THÀNH CÔNG / FALLBACK</h3>
+                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>CHATBOT: TỶ LỆ TRẢ LỜI THÀNH CÔNG / FALLBACK</h3>
                 {stats.total_questions === 0 ? (
                   <p className="text-sm text-center py-10" style={{ color: "#B8956A" }}>Chưa có dữ liệu</p>
                 ) : (
@@ -205,7 +205,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>📈 CHATBOT: LƯỢNG CÂU HỎI THEO NGÀY (7 NGÀY GẦN NHẤT)</h3>
+                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>CHATBOT: LƯỢNG CÂU HỎI THEO NGÀY (7 NGÀY GẦN NHẤT)</h3>
                 {stats.daily_questions.length === 0 ? (
                   <p className="text-sm text-center py-10" style={{ color: "#B8956A" }}>Chưa có dữ liệu</p>
                 ) : (
@@ -225,7 +225,7 @@ export default function DashboardPage() {
 
             {/* ── BIỂU ĐỒ TOP THỦ TỤC CHATBOT ── */}
             <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-              <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>🔥 THỦ TỤC HÀNH CHÍNH ĐƯỢC HỎI NHIỀU NHẤT (CHATBOT)</h3>
+              <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>THỦ TỤC HÀNH CHÍNH ĐƯỢC HỎI NHIỀU NHẤT (CHATBOT)</h3>
               {stats.top_thu_tuc.length === 0 ? (
                 <p className="text-sm text-center py-6" style={{ color: "#B8956A" }}>Dữ liệu sẽ xuất hiện sau khi có thêm câu hỏi mới.</p>
               ) : (
@@ -245,7 +245,7 @@ export default function DashboardPage() {
             {/* ── BIỂU ĐỒ HỒ SƠ LÁI THIÊU ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>📊 HỒ SƠ: PHÂN BỔ TRẠNG THÁI</h3>
+                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>HỒ SƠ: PHÂN BỔ TRẠNG THÁI</h3>
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie data={hoso.status_list} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
@@ -265,7 +265,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>⏱️ HỒ SƠ: TỶ LỆ ĐÚNG HẠN / TRỄ HẠN</h3>
+                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>HỒ SƠ: TỶ LỆ ĐÚNG HẠN / TRỄ HẠN</h3>
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie data={overdueData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
@@ -289,7 +289,7 @@ export default function DashboardPage() {
             {/* ── HỒ SƠ THEO LĨNH VỰC & TOP THỦ TỤC ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>🏷️ HỒ SƠ THEO LĨNH VỰC (TOP 6)</h3>
+                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>HỒ SƠ THEO LĨNH VỰC (TOP 6)</h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={hoso.sectors} layout="vertical" margin={{ left: 10, right: 40, top: 5, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F5E8D5" />
@@ -302,7 +302,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>🏆 TOP 5 THỦ TỤC ĐƯỢC NỘP NHIỀU NHẤT</h3>
+                <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>TOP 5 THỦ TỤC ĐƯỢC NỘP NHIỀU NHẤT</h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={hoso.top_procedures} layout="vertical" margin={{ left: 10, right: 40, top: 5, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F5E8D5" />
@@ -318,7 +318,7 @@ export default function DashboardPage() {
 
             {/* ── BIỂU ĐỒ ĐÚNG/TRỄ HẠN THEO LĨNH VỰC ── */}
             <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-              <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>✅ ĐÚNG HẠN / TRỄ HẠN THEO LĨNH VỰC</h3>
+              <h3 className="text-xs font-bold tracking-wide mb-3" style={{ color: "#7B1818" }}>ĐÚNG HẠN / TRỄ HẠN THEO LĨNH VỰC</h3>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={hoso.overdue_by_sector} layout="vertical" margin={{ left: 10, right: 40, top: 5, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F5E8D5" />
