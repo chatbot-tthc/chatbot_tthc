@@ -505,7 +505,7 @@ export default function Home() {
             </Link>
 
             <Link
-              href="/dashboard/ho-so"
+              href="/dashboard/hoso"
               className="flex items-center gap-3 p-3 rounded-xl transition-all"
               style={{ border: "1.5px solid rgba(212,168,67,0.25)" }}
               onMouseEnter={(e) => {
