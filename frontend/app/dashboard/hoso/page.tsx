@@ -265,12 +265,7 @@ export default function DashboardHosoPage() {
           </div>
         </div>
         <div className="flex items-center gap-3 relative z-10">
-          <Link href="/dashboard"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:bg-white/20"
-            style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}>
-            <MessageSquare className="w-3.5 h-3.5" />
-            Dashboard Chatbot
-          </Link>
+          
           {lastUpdated && <span className="text-[10px]" style={{ color: "rgba(232,192,106,0.7)" }}>Cập nhật: {lastUpdated}</span>}
           <button onClick={fetchData} disabled={loading}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/15 disabled:opacity-50"

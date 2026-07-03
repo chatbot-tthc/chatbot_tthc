@@ -138,14 +138,6 @@ export default function DashboardChatbotPage() {
           </div>
         </div>
         <div className="flex items-center gap-3 relative z-10">
-          <Link
-            href="/dashboard/hoso"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:bg-white/20"
-            style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            Dashboard Hồ Sơ
-          </Link>
           {lastUpdated && (
             <span className="text-[10px]" style={{ color: "rgba(232,192,106,0.7)" }}>
               Cập nhật: {lastUpdated}
