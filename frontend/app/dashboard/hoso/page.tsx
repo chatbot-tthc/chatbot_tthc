@@ -58,11 +58,9 @@ const tooltipStyle = {
 
 const PAGE_SIZE = 10;
 
-// Danh sách cơ quan — anh hướng dẫn sẽ cung cấp thêm data
 const CO_QUAN_LIST = [
   { value: "", label: "Tất cả cơ quan" },
   { value: "lai-thieu", label: "Phường Lái Thiêu" },
-  // Thêm phường khác khi có data
 ];
 
 function KpiCard({ icon, label, value, sub, accent, color }: {
@@ -85,7 +83,6 @@ function KpiCard({ icon, label, value, sub, accent, color }: {
   );
 }
 
-// ── POPUP DANH SÁCH HỒ SƠ ──────────────────────────────────────────────────
 function HosoPopup({ popup, phuong, onClose }: {
   popup: PopupState;
   phuong: string;
@@ -106,10 +103,7 @@ function HosoPopup({ popup, phuong, onClose }: {
     setLoading(true);
     fetch(`${API_URL}/api/v1/hoso/list?${params}`)
       .then(r => r.json())
-      .then(d => {
-        setItems(d.items || []);
-        setTotal(d.total || 0);
-      })
+      .then(d => { setItems(d.items || []); setTotal(d.total || 0); })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [page, popup, phuong]);
@@ -129,8 +123,6 @@ function HosoPopup({ popup, phuong, onClose }: {
       <div className="w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden"
         style={{ background: "#FFFBF5", border: "1.5px solid rgba(201,151,60,0.3)", maxHeight: "85vh" }}
         onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div className="px-5 py-4 flex items-center justify-between"
           style={{ background: "linear-gradient(135deg,#7B1818,#9B2020)" }}>
           <div>
@@ -145,8 +137,6 @@ function HosoPopup({ popup, phuong, onClose }: {
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
-
-        {/* Table */}
         <div className="overflow-y-auto" style={{ maxHeight: "calc(85vh - 130px)" }}>
           {loading ? (
             <div className="text-center py-12">
@@ -191,8 +181,6 @@ function HosoPopup({ popup, phuong, onClose }: {
             </table>
           )}
         </div>
-
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-5 py-3 flex items-center justify-between border-t"
             style={{ borderColor: "rgba(232,192,106,0.2)", background: "#FDF5E6" }}>
@@ -226,7 +214,6 @@ function HosoPopup({ popup, phuong, onClose }: {
   );
 }
 
-// ── MAIN ────────────────────────────────────────────────────────────────────
 export default function DashboardHosoPage() {
   const [hoso, setHoso] = useState<HosoData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,8 +238,8 @@ export default function DashboardHosoPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const overdueData = hoso ? [
-    { name: "Đúng hạn", value: hoso.on_time_count, color: "#1baf7a" },
-    { name: "Trễ hạn", value: hoso.overdue_count, color: "#e34948" },
+    { name: "Đúng hạn", value: hoso.on_time_count, color: "#1baf7a", filter: { trang_thai_nhom: "dung_han" } },
+    { name: "Trễ hạn", value: hoso.overdue_count, color: "#e34948", filter: { trang_thai_nhom: "tre_han" } },
   ] : [];
 
   const openPopup = (title: string, filter: Record<string, string>) => {
@@ -263,7 +250,6 @@ export default function DashboardHosoPage() {
     <div className="min-h-screen"
       style={{ backgroundImage: "url('/bg-lotus.png')", backgroundSize: "cover", backgroundPosition: "center top", backgroundAttachment: "fixed" }}>
 
-      {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-3"
         style={{ background: "linear-gradient(135deg,#5C1010 0%,#8B1A1A 55%,#6B1414 100%)", boxShadow: "0 2px 20px rgba(0,0,0,0.45)" }}>
         <div className="absolute inset-0 opacity-15 pointer-events-none"
@@ -302,7 +288,6 @@ export default function DashboardHosoPage() {
           </div>
         )}
 
-        {/* BỘ LỌC CƠ QUAN */}
         <div className="rounded-2xl p-4 flex items-center gap-4"
           style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#7B1818" }}>Cơ quan:</span>
@@ -342,48 +327,62 @@ export default function DashboardHosoPage() {
 
             {/* PHÂN BỔ TRẠNG THÁI + TỶ LỆ ĐÚNG/TRỄ HẠN */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Phân bổ trạng thái */}
-              <div className="rounded-2xl p-4 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5"
-                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}
-                onClick={() => openPopup("Danh sách hồ sơ theo trạng thái", {})}>
+              {/* Phân bổ trạng thái — click từng segment */}
+              <div className="rounded-2xl p-4"
+                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xs font-bold tracking-wide" style={{ color: "#7B1818" }}>PHÂN BỔ TRẠNG THÁI HỒ SƠ</h3>
                   <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: "#FDF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
-                    Bấm để xem chi tiết
+                    Bấm vào từng phần để xem
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
-                    <Pie data={hoso.status_list} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
-                      {hoso.status_list.map((s, i) => <Cell key={i} fill={STATUS_COLORS[s.name] || "#888780"} />)}
+                    <Pie data={hoso.status_list} cx="50%" cy="50%" innerRadius={45} outerRadius={70}
+                      paddingAngle={2} dataKey="value" cursor="pointer"
+                      onClick={(data) => openPopup(`Hồ sơ: ${data?.name ?? ""}`, { trang_thai: data?.name ?? "" })}>
+                      {hoso.status_list.map((s, i) => (
+                        <Cell key={i} fill={STATUS_COLORS[s.name] || "#888780"}
+                          stroke="white" strokeWidth={2}
+                          style={{ filter: "drop-shadow(0 0 0 transparent)", transition: "all 0.2s" }} />
+                      ))}
                     </Pie>
                     <Tooltip formatter={(v: unknown) => [`${Number(v) || 0} hồ sơ`, ""]} contentStyle={tooltipStyle} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
                   {hoso.status_list.map((s, i) => (
-                    <div key={i} className="flex items-center gap-1 text-[9px]" style={{ color: "#5A3A1A" }}>
+                    <button key={i}
+                      className="flex items-center gap-1 text-[9px] hover:opacity-70 transition-opacity cursor-pointer"
+                      style={{ color: "#5A3A1A" }}
+                      onClick={() => openPopup(`Hồ sơ: ${s.name}`, { trang_thai: s.name })}>
                       <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: STATUS_COLORS[s.name] || "#888780" }} />
                       {s.name} ({s.value})
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
 
-              {/* Tỷ lệ đúng/trễ hạn */}
-              <div className="rounded-2xl p-4 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5"
-                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}
-                onClick={() => openPopup("Danh sách hồ sơ trễ hạn", { trang_thai_nhom: "tre_han" })}>
+              {/* Tỷ lệ đúng/trễ hạn — click từng segment */}
+              <div className="rounded-2xl p-4"
+                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xs font-bold tracking-wide" style={{ color: "#7B1818" }}>TỶ LỆ ĐÚNG HẠN / TRỄ HẠN</h3>
                   <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: "#FDF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
-                    Bấm để xem trễ hạn
+                    Bấm vào từng phần để xem
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
-                    <Pie data={overdueData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                      {overdueData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    <Pie data={overdueData} cx="50%" cy="50%" innerRadius={45} outerRadius={70}
+                      paddingAngle={3} dataKey="value" cursor="pointer"
+                      onClick={(data) => openPopup(
+                        data.name === "Đúng hạn" ? "Danh sách hồ sơ đúng hạn" : "Danh sách hồ sơ trễ hạn",
+                        (data?.filter as unknown as Record<string, string>) ?? {}
+                      )}>
+                      {overdueData.map((d, i) => (
+                        <Cell key={i} fill={d.color} stroke="white" strokeWidth={2} />
+                      ))}
                       <Label value={`${hoso.on_time_rate}%`} position="center" fill="#1baf7a" fontSize={20} fontWeight="bold" />
                     </Pie>
                     <Tooltip formatter={(v: unknown) => [`${Number(v) || 0} hồ sơ`, ""]} contentStyle={tooltipStyle} />
@@ -391,10 +390,16 @@ export default function DashboardHosoPage() {
                 </ResponsiveContainer>
                 <div className="flex items-center justify-center gap-6 mt-2">
                   {overdueData.map((d, i) => (
-                    <div key={i} className="flex items-center gap-1.5 text-[10px]" style={{ color: "#5A3A1A" }}>
+                    <button key={i}
+                      className="flex items-center gap-1.5 text-[10px] hover:opacity-70 transition-opacity cursor-pointer"
+                      style={{ color: "#5A3A1A" }}
+                      onClick={() => openPopup(
+                        d.name === "Đúng hạn" ? "Danh sách hồ sơ đúng hạn" : "Danh sách hồ sơ trễ hạn",
+                        d.filter
+                      )}>
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
                       {d.name} ({d.value}) · {((d.value / hoso.total) * 100).toFixed(1)}%
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -402,13 +407,12 @@ export default function DashboardHosoPage() {
 
             {/* HỒ SƠ THEO LĨNH VỰC + TOP THỦ TỤC */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="rounded-2xl p-4 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5"
-                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}
-                onClick={() => openPopup("Hồ sơ theo lĩnh vực", {})}>
+              <div className="rounded-2xl p-4"
+                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xs font-bold tracking-wide" style={{ color: "#7B1818" }}>HỒ SƠ THEO LĨNH VỰC (TOP 6)</h3>
                   <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: "#FDF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
-                    Bấm để xem chi tiết
+                    Bấm vào từng cột để xem
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height={220}>
@@ -417,19 +421,18 @@ export default function DashboardHosoPage() {
                     <XAxis type="number" tick={{ fontSize: 9, fill: "#9B7B5A" }} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 9, fill: "#5A3A1A" }} />
                     <Tooltip formatter={(v: unknown) => [`${Number(v) || 0} hồ sơ`, ""]} contentStyle={tooltipStyle} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#2a78d6" name="Hồ sơ"
-                      onClick={(data) => openPopup(`Hồ sơ lĩnh vực: ${data.name || ""}`, { linh_vuc: data.name || "" })} />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#2a78d6" name="Hồ sơ" cursor="pointer"
+                      onClick={(data) => openPopup(`Hồ sơ lĩnh vực: ${data?.name ?? ""}`, { linh_vuc: data?.name ?? "" })} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="rounded-2xl p-4 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5"
-                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}
-                onClick={() => openPopup("Top thủ tục được nộp nhiều nhất", {})}>
+              <div className="rounded-2xl p-4"
+                style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xs font-bold tracking-wide" style={{ color: "#7B1818" }}>TOP 5 THỦ TỤC ĐƯỢC NỘP NHIỀU NHẤT</h3>
                   <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: "#FDF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
-                    Bấm để xem chi tiết
+                    Bấm vào từng cột để xem
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height={220}>
@@ -439,21 +442,20 @@ export default function DashboardHosoPage() {
                     <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 9, fill: "#5A3A1A" }}
                       tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 26) + "…" : v} />
                     <Tooltip formatter={(v: unknown) => [`${Number(v) || 0} hồ sơ`, ""]} contentStyle={tooltipStyle} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#C9973C" name="Hồ sơ"
-                      onClick={(data) => openPopup(`Hồ sơ thủ tục: ${data.name || ""}`, { ten_thu_tuc: data.name || "" })} />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#C9973C" name="Hồ sơ" cursor="pointer"
+                      onClick={(data) => openPopup(`Hồ sơ thủ tục: ${data?.name ?? ""}`, { ten_thu_tuc: data?.name ?? "" })} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
             {/* ĐÚNG/TRỄ HẠN THEO LĨNH VỰC */}
-            <div className="rounded-2xl p-4 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5"
-              style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}
-              onClick={() => openPopup("Hồ sơ đúng hạn / trễ hạn theo lĩnh vực", {})}>
+            <div className="rounded-2xl p-4"
+              style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold tracking-wide" style={{ color: "#7B1818" }}>ĐÚNG HẠN / TRỄ HẠN THEO LĨNH VỰC</h3>
                 <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: "#FDF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
-                  Bấm để xem chi tiết
+                  Bấm vào từng phần để xem
                 </span>
               </div>
               <ResponsiveContainer width="100%" height={240}>
@@ -462,10 +464,10 @@ export default function DashboardHosoPage() {
                   <XAxis type="number" tick={{ fontSize: 9, fill: "#9B7B5A" }} allowDecimals={false} />
                   <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 9, fill: "#5A3A1A" }} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="on_time" stackId="a" fill="#1baf7a" name="Đúng hạn"
-                    onClick={(data) => openPopup(`Hồ sơ đúng hạn: ${data.name || ""}`, { linh_vuc: data.name || "", trang_thai_nhom: "dung_han" })} />
-                  <Bar dataKey="overdue" stackId="a" fill="#e34948" name="Trễ hạn" radius={[0, 4, 4, 0]}
-                    onClick={(data) => openPopup(`Hồ sơ trễ hạn: ${data.name || ""}`, { linh_vuc: data.name || "", trang_thai_nhom: "tre_han" })} />
+                  <Bar dataKey="on_time" stackId="a" fill="#1baf7a" name="Đúng hạn" cursor="pointer"
+                    onClick={(data) => openPopup(`Đúng hạn — ${data?.name ?? ""}`, { linh_vuc: data?.name ?? "", trang_thai_nhom: "dung_han" })} />
+                  <Bar dataKey="overdue" stackId="a" fill="#e34948" name="Trễ hạn" radius={[0, 4, 4, 0]} cursor="pointer"
+                    onClick={(data) => openPopup(`Trễ hạn — ${data?.name ?? ""}`, { linh_vuc: data?.name ?? "", trang_thai_nhom: "tre_han" })} />
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex items-center justify-center gap-6 mt-2">
@@ -485,7 +487,6 @@ export default function DashboardHosoPage() {
         )}
       </main>
 
-      {/* POPUP */}
       {popup && (
         <HosoPopup
           popup={popup}
