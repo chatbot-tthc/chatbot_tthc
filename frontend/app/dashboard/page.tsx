@@ -339,33 +339,6 @@ export default function DashboardChatbotPage() {
                 </ResponsiveContainer>
               )}
             </div>
-
-            {/* LINK SANG HỒ SƠ */}
-            <Link
-              href="/dashboard/hoso"
-              className="flex items-center justify-between p-4 rounded-2xl transition-all hover:shadow-lg hover:-translate-y-0.5 duration-200"
-              style={{
-                background: "linear-gradient(135deg,rgba(123,24,24,0.08),rgba(201,151,60,0.12))",
-                border: "1.5px solid rgba(201,151,60,0.3)",
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg,#7B1818,#9B2020)" }}
-                >
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: "#3D1A0E" }}>Dashboard Hồ Sơ Hành Chính</p>
-                  <p className="text-xs" style={{ color: "#9B7B5A" }}>
-                    Phân bổ trạng thái · Đúng/trễ hạn · Theo lĩnh vực · Interactive chart
-                  </p>
-                </div>
-              </div>
-              <LayoutDashboard className="w-5 h-5 shrink-0" style={{ color: "#C9973C" }} />
-            </Link>
-
             <p className="text-center text-[9px] pb-2" style={{ color: "#B8956A" }}>
               ✦ Dữ liệu thời gian thực — VNPT TP.HCM
             </p>
