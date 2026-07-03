@@ -494,12 +494,36 @@ export default function Home() {
                 <LayoutDashboard className="w-5 h-5" style={{ color: "#C9973C" }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ color: "#3D1A0E" }}>
-                  Dashboard
-                </p>
-                <p className="text-xs truncate" style={{ color: "#9B7B5A" }}>
-                  Phân tích & thống kê hiệu suất
-                </p>
+                <p className="text-sm font-semibold" style={{ color: "#3D1A0E" }}>Dashboard Chatbot</p>
+                <p className="text-xs truncate" style={{ color: "#9B7B5A" }}>Hiệu suất phản hồi & thống kê</p>
+              </div>
+              <ChevronRight className="w-4 h-4 shrink-0 opacity-40" style={{ color: "#C9973C" }} />
+            </Link>
+
+            <Link
+              href="/dashboard/hoso"
+              className="flex items-center gap-3 p-3 rounded-xl transition-all"
+              style={{ border: "1.5px solid rgba(212,168,67,0.25)" }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.background = "rgba(245,232,213,0.8)";
+                el.style.borderColor = "#C9973C";
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.background = "transparent";
+                el.style.borderColor = "rgba(212,168,67,0.25)";
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "linear-gradient(135deg,#F5E8D5,#EDD9B8)" }}
+              >
+                <FileText className="w-5 h-5" style={{ color: "#C9973C" }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold" style={{ color: "#3D1A0E" }}>Dashboard Hồ Sơ</p>
+                <p className="text-xs truncate" style={{ color: "#9B7B5A" }}>Luồng công việc & xử lý hồ sơ</p>
               </div>
               <ChevronRight className="w-4 h-4 shrink-0 opacity-40" style={{ color: "#C9973C" }} />
             </Link>
