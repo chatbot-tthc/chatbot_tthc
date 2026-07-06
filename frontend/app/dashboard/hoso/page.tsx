@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, AlertTriangle, FileText,
   CheckCircle, XCircle, Clock, X, ChevronLeft, ChevronRight,
-  MessageSquare,
+  MessageSquare, Upload,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, Label, ResponsiveContainer,
@@ -15,15 +15,10 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface HosoData {
-  phuong: string;
-  thang: string;
-  total: number;
-  overdue_count: number;
-  on_time_count: number;
-  overdue_rate: number;
-  on_time_rate: number;
-  done_count: number;
-  waiting_count: number;
+  phuong: string; thang: string; total: number;
+  overdue_count: number; on_time_count: number;
+  overdue_rate: number; on_time_rate: number;
+  done_count: number; waiting_count: number;
   status_list: { name: string; value: number }[];
   sectors: { name: string; count: number }[];
   top_procedures: { name: string; count: number }[];
@@ -32,17 +27,17 @@ interface HosoData {
 }
 
 interface HosoItem {
-  id: string;
-  ten_thu_tuc: string;
-  trang_thai: string;
-  ngay_nop: string;
-  han_xu_ly: string;
-  linh_vuc: string;
+  id: string; ten_thu_tuc: string; trang_thai: string;
+  ngay_nop: string; han_xu_ly: string; linh_vuc: string;
 }
 
-interface PopupState {
-  title: string;
-  filter: Record<string, string>;
+interface PopupState { title: string; filter: Record<string, string>; }
+
+interface CoQuan { value: string; label: string; thang: string; }
+
+interface UploadResult {
+  success: boolean; message: string; total_records?: number;
+  preview?: { total: number; on_time_rate: number; overdue_rate: number };
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,11 +53,7 @@ const tooltipStyle = {
 
 const PAGE_SIZE = 10;
 
-const CO_QUAN_LIST = [
-  { value: "", label: "Tất cả cơ quan" },
-  { value: "lai-thieu", label: "Phường Lái Thiêu" },
-];
-
+// ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ icon, label, value, sub, accent, color }: {
   icon: React.ReactNode; label: string; value: string | number;
   sub?: string; accent?: string; color?: string;
@@ -83,10 +74,9 @@ function KpiCard({ icon, label, value, sub, accent, color }: {
   );
 }
 
+// ── Hoso Popup ────────────────────────────────────────────────────────────────
 function HosoPopup({ popup, phuong, onClose }: {
-  popup: PopupState;
-  phuong: string;
-  onClose: () => void;
+  popup: PopupState; phuong: string; onClose: () => void;
 }) {
   const [items, setItems] = useState<HosoItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,10 +85,8 @@ function HosoPopup({ popup, phuong, onClose }: {
 
   useEffect(() => {
     const params = new URLSearchParams({
-      page: String(page),
-      page_size: String(PAGE_SIZE),
-      phuong: phuong || "lai-thieu",
-      ...popup.filter,
+      page: String(page), page_size: String(PAGE_SIZE),
+      phuong: phuong || "lai-thieu", ...popup.filter,
     });
     setLoading(true);
     fetch(`${API_URL}/api/v1/hoso/list?${params}`)
@@ -214,19 +202,178 @@ function HosoPopup({ popup, phuong, onClose }: {
   );
 }
 
+// ── Upload Modal ──────────────────────────────────────────────────────────────
+function UploadModal({ onClose, onSuccess }: {
+  onClose: () => void; onSuccess: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [tenCoQuan, setTenCoQuan] = useState("");
+  const [slug, setSlug] = useState("");
+  const [thang, setThang] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<UploadResult | null>(null);
+  const [error, setError] = useState("");
+
+  const handleTenChange = (val: string) => {
+    setTenCoQuan(val);
+    const autoSlug = val.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d").replace(/[^a-z0-9\s]/g, "")
+      .trim().replace(/\s+/g, "-");
+    setSlug(autoSlug);
+  };
+
+  const handleUpload = async () => {
+    if (!file || !tenCoQuan || !slug || !thang) {
+      setError("Vui lòng điền đầy đủ thông tin."); return;
+    }
+    setUploading(true); setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("ten_co_quan", tenCoQuan);
+      formData.append("slug", slug);
+      formData.append("thang", thang);
+      const res = await fetch(`${API_URL}/api/v1/hoso/upload`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Upload thất bại.");
+      setResult(data);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Lỗi không xác định.");
+    } finally { setUploading(false); }
+  };
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}>
+      <div className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+        style={{ background: "#FFFBF5", border: "1.5px solid rgba(201,151,60,0.3)" }}
+        onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 flex items-center justify-between"
+          style={{ background: "linear-gradient(135deg,#7B1818,#9B2020)" }}>
+          <div>
+            <p className="text-white font-bold">Cập nhật dữ liệu hồ sơ</p>
+            <p className="text-xs mt-0.5" style={{ color: "rgba(232,192,106,0.8)" }}>Upload file JSON dữ liệu cơ quan mới</p>
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/20"
+            style={{ background: "rgba(255,255,255,0.12)" }}>
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {result ? (
+            <div className="text-center py-4">
+              <CheckCircle className="w-12 h-12 mx-auto mb-3" style={{ color: "#1baf7a" }} />
+              <p className="font-bold text-sm mb-1" style={{ color: "#1baf7a" }}>{result.message}</p>
+              <p className="text-xs" style={{ color: "#5A3A1A" }}>
+                {result.total_records} hồ sơ · Đúng hạn {result.preview?.on_time_rate}% · Trễ hạn {result.preview?.overdue_rate}%
+              </p>
+              <button onClick={() => { onSuccess(); onClose(); }}
+                className="mt-4 px-6 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg,#7B1818,#9B2020)" }}>
+                Xem Dashboard
+              </button>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: "#7B1818" }}>File JSON dữ liệu *</label>
+                <label className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all hover:opacity-80"
+                  style={{ background: "#FDF5E6", border: "1.5px dashed #E8C06A" }}>
+                  <Upload className="w-4 h-4" style={{ color: "#C9973C" }} />
+                  <span className="text-xs" style={{ color: file ? "#3D1A0E" : "#9B7B5A" }}>
+                    {file ? file.name : "Chọn file JSON..."}
+                  </span>
+                  <input type="file" accept=".json" className="hidden"
+                    onChange={e => setFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: "#7B1818" }}>Tên cơ quan *</label>
+                <input type="text" value={tenCoQuan} onChange={e => handleTenChange(e.target.value)}
+                  placeholder="VD: Phường Thuận Giao"
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                  style={{ background: "#FDF5E6", border: "1.5px solid #E8C06A", color: "#3D1A0E" }} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: "#7B1818" }}>
+                  Mã định danh <span style={{ color: "#9B7B5A", fontWeight: 400 }}>(tự động)</span>
+                </label>
+                <input type="text" value={slug} onChange={e => setSlug(e.target.value)}
+                  placeholder="VD: thuan-giao"
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                  style={{ background: "#F5F5F5", border: "1.5px solid #DDD", color: "#666" }} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: "#7B1818" }}>Tháng dữ liệu *</label>
+                <input type="text" value={thang} onChange={e => setThang(e.target.value)}
+                  placeholder="VD: 07/2026"
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                  style={{ background: "#FDF5E6", border: "1.5px solid #E8C06A", color: "#3D1A0E" }} />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl"
+                  style={{ background: "#FFF0F0", color: "#B22222", border: "1px solid #FFAAAA" }}>
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />{error}
+                </div>
+              )}
+
+              <button onClick={handleUpload} disabled={uploading}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ background: "linear-gradient(135deg,#7B1818,#9B2020)" }}>
+                {uploading
+                  ? <><RefreshCw className="w-4 h-4 animate-spin" />Đang upload...</>
+                  : <><Upload className="w-4 h-4" />Upload dữ liệu</>}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function DashboardHosoPage() {
   const [hoso, setHoso] = useState<HosoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [selectedCoQuan, setSelectedCoQuan] = useState("");
+  const [selectedCoQuan, setSelectedCoQuan] = useState("lai-thieu");
+  const [coQuanList, setCoQuanList] = useState<CoQuan[]>([
+    { value: "lai-thieu", label: "Phường Lái Thiêu", thang: "06/2026" },
+  ]);
   const [popup, setPopup] = useState<PopupState | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
+
+  // Fetch danh sách cơ quan động
+  const fetchCoQuanList = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/v1/hoso/co-quan`);
+      if (r.ok) {
+        const list = await r.json();
+        if (list.length > 0) setCoQuanList(list);
+      }
+    } catch {}
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const endpoint = selectedCoQuan || "lai-thieu";
-      const r = await fetch(`${API_URL}/api/v1/hoso/${endpoint}`);
+      const r = await fetch(`${API_URL}/api/v1/hoso/${selectedCoQuan}`);
       if (!r.ok) throw new Error(`Lỗi ${r.status}`);
       setHoso(await r.json());
       setLastUpdated(new Date().toLocaleTimeString("vi-VN"));
@@ -235,6 +382,7 @@ export default function DashboardHosoPage() {
     } finally { setLoading(false); }
   }, [selectedCoQuan]);
 
+  useEffect(() => { fetchCoQuanList(); }, [fetchCoQuanList]);
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const overdueData = hoso ? [
@@ -242,14 +390,13 @@ export default function DashboardHosoPage() {
     { name: "Trễ hạn", value: hoso.overdue_count, color: "#e34948", filter: { trang_thai_nhom: "tre_han" } },
   ] : [];
 
-  const openPopup = (title: string, filter: Record<string, string>) => {
-    setPopup({ title, filter });
-  };
+  const openPopup = (title: string, filter: Record<string, string>) => setPopup({ title, filter });
 
   return (
     <div className="min-h-screen"
       style={{ backgroundImage: "url('/bg-lotus.png')", backgroundSize: "cover", backgroundPosition: "center top", backgroundAttachment: "fixed" }}>
 
+      {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-3"
         style={{ background: "linear-gradient(135deg,#5C1010 0%,#8B1A1A 55%,#6B1414 100%)", boxShadow: "0 2px 20px rgba(0,0,0,0.45)" }}>
         <div className="absolute inset-0 opacity-15 pointer-events-none"
@@ -264,9 +411,18 @@ export default function DashboardHosoPage() {
             <p className="text-[10px] tracking-wider" style={{ color: "#E8C06A" }}>Phân tích luồng công việc & hiệu suất xử lý — VNPT TP.HCM</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 relative z-10">
-          
-          {lastUpdated && <span className="text-[10px]" style={{ color: "rgba(232,192,106,0.7)" }}>Cập nhật: {lastUpdated}</span>}
+        <div className="flex items-center gap-2 relative z-10">
+          <Link href="/dashboard"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:bg-white/20"
+            style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}>
+            <MessageSquare className="w-3.5 h-3.5" />Dashboard Chatbot
+          </Link>
+          <button onClick={() => setShowUpload(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:bg-white/20"
+            style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}>
+            <Upload className="w-3.5 h-3.5" />Cập nhật dữ liệu
+          </button>
+          {lastUpdated && <span className="hidden sm:block text-[10px]" style={{ color: "rgba(232,192,106,0.7)" }}>Cập nhật: {lastUpdated}</span>}
           <button onClick={fetchData} disabled={loading}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/15 disabled:opacity-50"
             style={{ background: "rgba(255,255,255,0.12)" }}>
@@ -283,14 +439,15 @@ export default function DashboardHosoPage() {
           </div>
         )}
 
+        {/* Dropdown cơ quan */}
         <div className="rounded-2xl p-4 flex items-center gap-4"
           style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#7B1818" }}>Cơ quan:</span>
+          <span className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: "#7B1818" }}>Cơ quan:</span>
           <select value={selectedCoQuan} onChange={e => setSelectedCoQuan(e.target.value)}
             className="flex-1 max-w-xs px-3 py-2 rounded-xl text-sm outline-none transition-all"
             style={{ background: "#FDF5E6", border: "1.5px solid #E8C06A", color: "#3D1A0E" }}>
-            {CO_QUAN_LIST.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
+            {coQuanList.map(c => (
+              <option key={c.value} value={c.value}>{c.label}{c.thang ? ` — ${c.thang}` : ""}</option>
             ))}
           </select>
         </div>
@@ -307,8 +464,7 @@ export default function DashboardHosoPage() {
             {/* KPI */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <KpiCard icon={<FileText className="w-4 h-4 text-white" />}
-                accent="linear-gradient(135deg,#4A4A4A,#6B6B6B)" label="Tổng hồ sơ"
-                value={hoso.total} sub={hoso.thang} />
+                accent="linear-gradient(135deg,#4A4A4A,#6B6B6B)" label="Tổng hồ sơ" value={hoso.total} sub={hoso.thang} />
               <KpiCard icon={<CheckCircle className="w-4 h-4 text-white" />}
                 accent="linear-gradient(135deg,#1B8A4A,#2BAD6B)" label="Đúng hạn"
                 value={hoso.on_time_count} sub={`${hoso.on_time_rate}%`} color="#1B8A4A" />
@@ -320,9 +476,8 @@ export default function DashboardHosoPage() {
                 value={hoso.done_count} sub={`${((hoso.done_count / hoso.total) * 100).toFixed(1)}%`} />
             </div>
 
-            {/* PHÂN BỔ TRẠNG THÁI + TỶ LỆ ĐÚNG/TRỄ HẠN */}
+            {/* Phân bổ trạng thái + Đúng/trễ hạn */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Phân bổ trạng thái — click từng segment */}
               <div className="rounded-2xl p-4"
                 style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
                 <div className="flex items-center justify-between mb-3">
@@ -337,9 +492,7 @@ export default function DashboardHosoPage() {
                       paddingAngle={2} dataKey="value" cursor="pointer"
                       onClick={(data) => openPopup(`Hồ sơ: ${data?.name ?? ""}`, { trang_thai: data?.name ?? "" })}>
                       {hoso.status_list.map((s, i) => (
-                        <Cell key={i} fill={STATUS_COLORS[s.name] || "#888780"}
-                          stroke="white" strokeWidth={2}
-                          style={{ filter: "drop-shadow(0 0 0 transparent)", transition: "all 0.2s" }} />
+                        <Cell key={i} fill={STATUS_COLORS[s.name] || "#888780"} stroke="white" strokeWidth={2} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: unknown) => [`${Number(v) || 0} hồ sơ`, ""]} contentStyle={tooltipStyle} />
@@ -347,8 +500,7 @@ export default function DashboardHosoPage() {
                 </ResponsiveContainer>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
                   {hoso.status_list.map((s, i) => (
-                    <button key={i}
-                      className="flex items-center gap-1 text-[9px] hover:opacity-70 transition-opacity cursor-pointer"
+                    <button key={i} className="flex items-center gap-1 text-[9px] hover:opacity-70 transition-opacity"
                       style={{ color: "#5A3A1A" }}
                       onClick={() => openPopup(`Hồ sơ: ${s.name}`, { trang_thai: s.name })}>
                       <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: STATUS_COLORS[s.name] || "#888780" }} />
@@ -358,7 +510,6 @@ export default function DashboardHosoPage() {
                 </div>
               </div>
 
-              {/* Tỷ lệ đúng/trễ hạn — click từng segment */}
               <div className="rounded-2xl p-4"
                 style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
                 <div className="flex items-center justify-between mb-3">
@@ -375,9 +526,7 @@ export default function DashboardHosoPage() {
                         data.name === "Đúng hạn" ? "Danh sách hồ sơ đúng hạn" : "Danh sách hồ sơ trễ hạn",
                         (data?.filter as unknown as Record<string, string>) ?? {}
                       )}>
-                      {overdueData.map((d, i) => (
-                        <Cell key={i} fill={d.color} stroke="white" strokeWidth={2} />
-                      ))}
+                      {overdueData.map((d, i) => <Cell key={i} fill={d.color} stroke="white" strokeWidth={2} />)}
                       <Label value={`${hoso.on_time_rate}%`} position="center" fill="#1baf7a" fontSize={20} fontWeight="bold" />
                     </Pie>
                     <Tooltip formatter={(v: unknown) => [`${Number(v) || 0} hồ sơ`, ""]} contentStyle={tooltipStyle} />
@@ -385,8 +534,7 @@ export default function DashboardHosoPage() {
                 </ResponsiveContainer>
                 <div className="flex items-center justify-center gap-6 mt-2">
                   {overdueData.map((d, i) => (
-                    <button key={i}
-                      className="flex items-center gap-1.5 text-[10px] hover:opacity-70 transition-opacity cursor-pointer"
+                    <button key={i} className="flex items-center gap-1.5 text-[10px] hover:opacity-70 transition-opacity"
                       style={{ color: "#5A3A1A" }}
                       onClick={() => openPopup(
                         d.name === "Đúng hạn" ? "Danh sách hồ sơ đúng hạn" : "Danh sách hồ sơ trễ hạn",
@@ -400,7 +548,7 @@ export default function DashboardHosoPage() {
               </div>
             </div>
 
-            {/* HỒ SƠ THEO LĨNH VỰC + TOP THỦ TỤC */}
+            {/* Lĩnh vực + Top thủ tục */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="rounded-2xl p-4"
                 style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
@@ -444,7 +592,7 @@ export default function DashboardHosoPage() {
               </div>
             </div>
 
-            {/* ĐÚNG/TRỄ HẠN THEO LĨNH VỰC */}
+            {/* Đúng/trễ hạn theo lĩnh vực */}
             <div className="rounded-2xl p-4"
               style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(201,151,60,0.2)", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
               <div className="flex items-center justify-between mb-3">
@@ -482,11 +630,11 @@ export default function DashboardHosoPage() {
         )}
       </main>
 
-      {popup && (
-        <HosoPopup
-          popup={popup}
-          phuong={selectedCoQuan || "lai-thieu"}
-          onClose={() => setPopup(null)}
+      {popup && <HosoPopup popup={popup} phuong={selectedCoQuan} onClose={() => setPopup(null)} />}
+      {showUpload && (
+        <UploadModal
+          onClose={() => setShowUpload(false)}
+          onSuccess={() => { fetchCoQuanList(); fetchData(); }}
         />
       )}
     </div>
