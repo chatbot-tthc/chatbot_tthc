@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, AlertTriangle, FileText,
   CheckCircle, XCircle, Clock, X, ChevronLeft, ChevronRight,
-  Upload,
+  MessageSquare, Upload
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, Label, ResponsiveContainer,
@@ -89,7 +89,7 @@ function HosoPopup({ popup, phuong, onClose }: {
       phuong: phuong || "lai-thieu", ...popup.filter,
     });
     setLoading(true);
-    fetch(`${API_URL}/api/v1/hoso/list?${params}`)
+    fetch(`${API_URL}/api/v1/hoso/hoso-list?${params}`)
       .then(r => r.json())
       .then(d => { setItems(d.items || []); setTotal(d.total || 0); })
       .catch(() => setItems([]))
@@ -412,12 +412,13 @@ export default function DashboardHosoPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 relative z-10">
-          <button onClick={() => setShowUpload(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:bg-white/20"
+
+          {lastUpdated && <span className="hidden sm:block text-[10px]" style={{ color: "rgba(232,192,106,0.7)" }}>Cập nhật: {lastUpdated}</span>}
+          {/* Nút ẩn — bỏ className "hidden" khi cần upload dữ liệu mới */}
+          <button onClick={() => setShowUpload(true)} className="hidden"
             style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}>
             <Upload className="w-3.5 h-3.5" />Cập nhật dữ liệu
           </button>
-          {lastUpdated && <span className="hidden sm:block text-[10px]" style={{ color: "rgba(232,192,106,0.7)" }}>Cập nhật: {lastUpdated}</span>}
           <button onClick={fetchData} disabled={loading}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/15 disabled:opacity-50"
             style={{ background: "rgba(255,255,255,0.12)" }}>

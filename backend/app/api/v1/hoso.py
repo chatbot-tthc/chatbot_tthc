@@ -150,7 +150,7 @@ def get_hoso_list(
         except Exception:
             pass
 
-        han_xu_ly = d.get("lastModifiedDate", "")
+        han_xu_ly = d.get("appointmentDate", "") or d.get("lastModifiedDate", "")
         try:
             han_xu_ly = datetime.strptime(han_xu_ly[:10], "%d/%m/%Y").strftime("%d/%m/%Y")
         except Exception:
