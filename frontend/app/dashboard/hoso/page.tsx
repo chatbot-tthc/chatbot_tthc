@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, AlertTriangle, FileText,
   CheckCircle, XCircle, Clock, X, ChevronLeft, ChevronRight,
-  MessageSquare, Upload,
+  Upload,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, Label, ResponsiveContainer,
@@ -89,7 +89,7 @@ function HosoPopup({ popup, phuong, onClose }: {
       phuong: phuong || "lai-thieu", ...popup.filter,
     });
     setLoading(true);
-    fetch(`${API_URL}/api/v1/hoso/list?${params}`)
+    fetch(`${API_URL}/api/v1/hoso/hoso-list?${params}`)
       .then(r => r.json())
       .then(d => { setItems(d.items || []); setTotal(d.total || 0); })
       .catch(() => setItems([]))
@@ -412,11 +412,6 @@ export default function DashboardHosoPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 relative z-10">
-          <Link href="/dashboard"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:bg-white/20"
-            style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}>
-            <MessageSquare className="w-3.5 h-3.5" />Dashboard Chatbot
-          </Link>
           <button onClick={() => setShowUpload(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:bg-white/20"
             style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}>
