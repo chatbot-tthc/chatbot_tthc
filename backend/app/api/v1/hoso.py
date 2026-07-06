@@ -112,15 +112,6 @@ def get_co_quan_list():
         if (DATA_DIR / info["file"]).exists()
     ]
 
-
-# ── GET /{phuong} — thống kê tổng hợp ───────────────────────────────────────
-@router.get("/{phuong}", tags=["Hồ sơ"])
-def get_hoso_stats(phuong: str):
-    """Trả về thống kê hồ sơ theo cơ quan."""
-    data = _load_data(phuong)
-    return _compute_stats(data, phuong)
-
-
 # ── GET /list — danh sách hồ sơ có filter + phân trang ──────────────────────
 @router.get("/list", tags=["Hồ sơ"])
 def get_hoso_list(
@@ -252,3 +243,9 @@ async def upload_hoso_data(
             "overdue_rate": stats["overdue_rate"],
         },
     }
+# ── GET /{phuong} — thống kê tổng hợp ───────────────────────────────────────
+@router.get("/{phuong}", tags=["Hồ sơ"])
+def get_hoso_stats(phuong: str):
+    """Trả về thống kê hồ sơ theo cơ quan."""
+    data = _load_data(phuong)
+    return _compute_stats(data, phuong)

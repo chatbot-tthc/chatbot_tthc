@@ -89,7 +89,7 @@ function HosoPopup({ popup, phuong, onClose }: {
       phuong: phuong || "lai-thieu", ...popup.filter,
     });
     setLoading(true);
-    fetch(`${API_URL}/api/v1/hoso/hoso-list?${params}`)
+    fetch(`${API_URL}/api/v1/hoso/list-hoso?${params}`)
       .then(r => r.json())
       .then(d => { setItems(d.items || []); setTotal(d.total || 0); })
       .catch(() => setItems([]))
