@@ -57,38 +57,105 @@ interface ChatMessage {
 }
 
 function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => void }) {
+  const highlightRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
+  // Scroll đến đoạn highlight sau khi render
+  useEffect(() => {
+    if (highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, []);
+
   const scorePercent = Math.round(chunk.score * 100);
-  const scoreColor = scorePercent >= 70 ? "#22c55e" : scorePercent >= 50 ? "#f59e0b" : "#ef4444";
-  const scoreTextColor = scoreColor === "#22c55e" ? "#86efac" : scoreColor === "#f59e0b" ? "#fcd34d" : "#fca5a5";
+  const scoreTextColor = scorePercent >= 70 ? "#86efac" : scorePercent >= 50 ? "#fcd34d" : "#fca5a5";
+
+  // Tìm và highlight đoạn chunk trong pdf_content
+  const renderPdfWithHighlight = () => {
+    if (!chunk.pdf_content) return null;
+
+    // Lấy key phrase từ chunk content (bỏ "..." ở cuối)
+    const cleanChunk = chunk.content.replace(/\.\.\.$/g, "").trim();
+    // Thử match từng dòng đầu của chunk
+    const firstLine = cleanChunk.split("\n")[0].trim();
+    const keyPhrase = firstLine.length > 20 ? firstLine.slice(0, 80) : cleanChunk.slice(0, 80);
+
+    const pdfText = chunk.pdf_content;
+    const idx = pdfText.indexOf(keyPhrase);
+
+    if (idx === -1) {
+      // Không tìm thấy vị trí chính xác — hiện toàn bộ text bình thường
+      return (
+        <div className="whitespace-pre-wrap text-xs leading-relaxed" style={{ color: "#3D1A0E" }}>
+          {pdfText}
+        </div>
+      );
+    }
+
+    // Tìm điểm bắt đầu và kết thúc của đoạn cần highlight
+    // Mở rộng để highlight toàn bộ chunk (không chỉ keyPhrase)
+    const highlightStart = idx;
+    const highlightEnd = Math.min(idx + cleanChunk.length + 50, pdfText.length);
+
+    const before = pdfText.slice(0, highlightStart);
+    const highlighted = pdfText.slice(highlightStart, highlightEnd);
+    const after = pdfText.slice(highlightEnd);
+
+    return (
+      <div className="whitespace-pre-wrap text-xs leading-relaxed" style={{ color: "#3D1A0E" }}>
+        {before}
+        <span
+          ref={highlightRef}
+          style={{
+            background: "linear-gradient(135deg, rgba(201,151,60,0.35), rgba(232,192,106,0.25))",
+            borderLeft: "3px solid #C9973C",
+            borderRadius: "2px",
+            padding: "2px 6px",
+            fontWeight: 600,
+            color: "#5A3A1A",
+            boxDecorationBreak: "clone",
+            WebkitBoxDecorationBreak: "clone",
+          }}
+        >
+          {highlighted}
+        </span>
+        {after}
+      </div>
+    );
+  };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden"
-        style={{ background: "#FFFBF5", border: "1.5px solid rgba(201,151,60,0.3)", maxHeight: "80vh" }}
+        className="relative w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        style={{
+          background: "#FFFBF5",
+          border: "1.5px solid rgba(201,151,60,0.3)",
+          maxHeight: "90vh",
+          maxWidth: chunk.pdf_content ? "780px" : "520px",
+          width: "100%",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div
-          className="px-5 py-4 flex items-start justify-between"
+          className="px-5 py-4 flex items-start justify-between shrink-0"
           style={{ background: "linear-gradient(135deg,#7B1818,#9B2020)", borderBottom: "1px solid rgba(201,151,60,0.2)" }}
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "rgba(255,255,255,0.15)" }}
-            >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(255,255,255,0.15)" }}>
               <FileText className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
@@ -103,67 +170,101 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
             </div>
           </div>
           <div className="flex items-center gap-2 ml-3 shrink-0">
-            <div
-              className="px-2.5 py-1 rounded-full text-xs font-bold"
-              style={{ background: "rgba(255,255,255,0.15)", color: "#E8C06A" }}
-            >
+            <div className="px-2.5 py-1 rounded-full text-xs font-bold"
+              style={{ background: "rgba(255,255,255,0.15)", color: "#E8C06A" }}>
               Độ liên quan: <span style={{ color: scoreTextColor }}>{scorePercent}%</span>
             </div>
-            <button
-              onClick={onClose}
+            <button onClick={onClose}
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/20"
-              style={{ background: "rgba(255,255,255,0.12)" }}
-            >
+              style={{ background: "rgba(255,255,255,0.12)" }}>
               <X className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>
 
-        <div className="px-5 py-4 overflow-y-auto" style={{ maxHeight: "calc(80vh - 80px)" }}>
-          <p className="text-xs font-bold tracking-widest mb-3" style={{ color: "#C9973C" }}>
-            NỘI DUNG ĐOẠN VĂN BẢN
-          </p>
-          <div
-            className="rounded-2xl p-4 text-sm leading-relaxed whitespace-pre-wrap"
-            style={{
-              background: "rgba(255,255,255,0.8)",
-              border: "1px solid rgba(201,151,60,0.2)",
-              color: "#3D1A0E",
-              fontFamily: "inherit",
-              lineHeight: "1.7",
-            }}
-          >
-            {chunk.content}
-          </div>
-
-          {chunk.pdf_content && (
-            <div className="mt-4">
-              <p className="text-xs font-bold tracking-widest mb-2" style={{ color: "#7B1818" }}>
-                NỘI DUNG FILE PDF GỐC
-              </p>
-              <div
-                className="rounded-2xl p-3 text-xs leading-relaxed whitespace-pre-wrap"
-                style={{
-                  background: "#FFF5E6",
-                  border: "1px solid #E8C06A",
-                  color: "#3D1A0E",
-                  maxHeight: "150px",
-                  overflowY: "auto",
-                }}
-              >
-                {chunk.pdf_content}
+        {/* Body */}
+        <div className="flex-1 overflow-hidden flex" style={{ minHeight: 0 }}>
+          {chunk.pdf_content ? (
+            // Layout 2 cột khi có PDF
+            <>
+              {/* Cột trái: Đoạn trích */}
+              <div className="w-64 shrink-0 flex flex-col border-r"
+                style={{ borderColor: "rgba(201,151,60,0.2)", background: "#FDF5E6" }}>
+                <div className="px-4 py-3 shrink-0 border-b" style={{ borderColor: "rgba(201,151,60,0.2)" }}>
+                  <p className="text-[10px] font-bold tracking-widest" style={{ color: "#C9973C" }}>
+                    ĐOẠN TRÍCH DẪN
+                  </p>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-3">
+                  <div className="rounded-xl p-3 text-xs leading-relaxed whitespace-pre-wrap"
+                    style={{
+                      background: "white",
+                      border: "1.5px solid #E8C06A",
+                      color: "#3D1A0E",
+                      lineHeight: "1.7",
+                    }}>
+                    {chunk.content}
+                  </div>
+                  <p className="text-[9px] mt-3 text-center" style={{ color: "#B8956A" }}>
+                    Đoạn văn bản chatbot đã dùng để trả lời
+                  </p>
+                </div>
               </div>
+
+              {/* Cột phải: Full PDF với highlight */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="px-4 py-3 shrink-0 border-b flex items-center justify-between"
+                  style={{ borderColor: "rgba(201,151,60,0.2)", background: "white" }}>
+                  <p className="text-[10px] font-bold tracking-widest" style={{ color: "#7B1818" }}>
+                    TÀI LIỆU PDF GỐC
+                  </p>
+                  <div className="flex items-center gap-1.5 text-[9px] px-2 py-1 rounded-full"
+                    style={{ background: "#FFF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
+                    <span style={{ background: "rgba(201,151,60,0.3)", borderRadius: "2px", padding: "0 4px" }}>■</span>
+                    Đoạn được trích dẫn
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-3"
+                  style={{ background: "white" }}>
+                  {renderPdfWithHighlight()}
+                </div>
+              </div>
+            </>
+          ) : (
+            // Layout 1 cột khi không có PDF
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <p className="text-xs font-bold tracking-widest mb-3" style={{ color: "#C9973C" }}>
+                NỘI DUNG ĐOẠN VĂN BẢN
+              </p>
+              <div className="rounded-2xl p-4 text-sm leading-relaxed whitespace-pre-wrap"
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  border: "1px solid rgba(201,151,60,0.2)",
+                  color: "#3D1A0E",
+                  lineHeight: "1.7",
+                }}>
+                {chunk.content}
+              </div>
+              <p className="text-xs mt-3 text-center" style={{ color: "#B8956A" }}>
+                Nhấn bên ngoài hoặc phím Esc để đóng
+              </p>
             </div>
           )}
-
-          <p className="text-xs mt-3 text-center" style={{ color: "#B8956A" }}>
-            Nhấn bên ngoài hoặc phím Esc để đóng
-          </p>
         </div>
+
+        {chunk.pdf_content && (
+          <div className="px-5 py-2 shrink-0 text-center"
+            style={{ background: "#FDF5E6", borderTop: "1px solid rgba(201,151,60,0.15)" }}>
+            <p className="text-[9px]" style={{ color: "#B8956A" }}>
+              Nhấn bên ngoài hoặc phím Esc để đóng
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 function ChunkChip({ chunk }: { chunk: RetrievedChunk }) {
   const [open, setOpen] = useState(false);

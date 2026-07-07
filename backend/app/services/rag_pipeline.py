@@ -257,7 +257,7 @@ class RAGPipeline:
                 "document_title": meta.get("ten_thu_tuc", ""),
                 "ma_thu_tuc": ma,
                 "score": norm_score,
-                "pdf_content": pdf_text[:500] + "..." if len(pdf_text) > 500 else pdf_text,
+                "pdf_content": pdf_text,
             })
 
         action_buttons = _detect_action_buttons(question, answer)
