@@ -256,6 +256,7 @@ class RAGPipeline:
                 "content": chunk[:300] + "..." if len(chunk) > 300 else chunk,
                 "document_title": meta.get("ten_thu_tuc", ""),
                 "ma_thu_tuc": ma,
+                "bo_nganh": bo_nganh,
                 "score": norm_score,
                 "pdf_content": pdf_text,
             })

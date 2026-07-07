@@ -22,6 +22,7 @@ class RetrievedChunk(BaseModel):
     content: str
     document_title: str
     ma_thu_tuc: Optional[str] = None
+    bo_nganh: Optional[str] = None
     score: float
     pdf_content: Optional[str] = None
 
