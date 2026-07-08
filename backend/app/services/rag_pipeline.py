@@ -121,6 +121,32 @@ class RAGPipeline:
             normalize_embeddings=True,
         ).tolist()
 
+    async def _rewrite_query(self, question: str) -> str:
+        """Dùng Gemini rewrite câu hỏi thành query chuẩn hóa cho retrieval."""
+        try:
+            prompt = f"""Bạn là chuyên gia về thủ tục hành chính Việt Nam.
+Viết lại câu hỏi sau thành một truy vấn tìm kiếm ngắn gọn, rõ ràng về thủ tục hành chính.
+Chỉ trả về truy vấn mới, không giải thích, không thêm thông tin.
+
+Ví dụ:
+- "làm hộ chiếu cần gì" → "hồ sơ giấy tờ cần chuẩn bị thủ tục cấp hộ chiếu"
+- "đăng ký xe máy mua mới" → "thủ tục đăng ký xe mô tô xe máy lần đầu"
+- "lệ phí khai sinh" → "mức lệ phí thủ tục đăng ký khai sinh"
+
+Câu hỏi: {question}
+Truy vấn:"""
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+            )
+            rewritten = response.text.strip().strip('"').strip("'")
+            # Nếu rewrite quá dài hoặc lỗi thì dùng câu gốc
+            if len(rewritten) > 200 or len(rewritten) < 3:
+                return question
+            return rewritten
+        except Exception:
+            return question  # Fallback về câu gốc nếu lỗi
+
     def _retrieve(self, question: str):
         collection = self._get_collection()
         queries = _expand_query(question)
@@ -209,7 +235,9 @@ class RAGPipeline:
 === TRẢ LỜI ==="""
 
     async def query(self, question: str) -> dict:
-        chunks, distances, metadatas = self._retrieve(question)
+        # Rewrite query để cải thiện retrieval accuracy
+        rewritten_question = await self._rewrite_query(question)
+        chunks, distances, metadatas = self._retrieve(rewritten_question)
 
         if self._check_fallback(distances):
             return {
@@ -221,7 +249,7 @@ class RAGPipeline:
                 "action_buttons": [],
             }
 
-        reranked = self._rerank(question, chunks)
+        reranked = self._rerank(rewritten_question, chunks)
         top_chunks = [c for c, _, _ in reranked]
 
         pdf_docs = []
