@@ -37,6 +37,7 @@ interface RetrievedChunk {
   content: string;
   document_title: string;
   ma_thu_tuc: string;
+  bo_nganh?: string;
   score: number;
   pdf_content?: string;
 }
@@ -143,7 +144,7 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
           background: "#FFFBF5",
           border: "1.5px solid rgba(201,151,60,0.3)",
           maxHeight: "90vh",
-          maxWidth: chunk.pdf_content ? "780px" : "520px",
+          maxWidth: (chunk.pdf_content || chunk.bo_nganh) ? "900px" : "520px",
           width: "100%",
         }}
         onClick={(e) => e.stopPropagation()}
@@ -184,7 +185,7 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
 
         {/* Body */}
         <div className="flex-1 overflow-hidden flex" style={{ minHeight: 0 }}>
-          {chunk.pdf_content ? (
+          {(chunk.pdf_content || chunk.bo_nganh) ? (
             // Layout 2 cột khi có PDF
             <>
               {/* Cột trái: Đoạn trích */}
@@ -211,22 +212,38 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
                 </div>
               </div>
 
-              {/* Cột phải: Full PDF với highlight */}
+              {/* Cột phải: iframe PDF gốc */}
               <div className="flex-1 flex flex-col min-w-0">
                 <div className="px-4 py-3 shrink-0 border-b flex items-center justify-between"
                   style={{ borderColor: "rgba(201,151,60,0.2)", background: "white" }}>
                   <p className="text-[10px] font-bold tracking-widest" style={{ color: "#7B1818" }}>
                     TÀI LIỆU PDF GỐC
                   </p>
-                  <div className="flex items-center gap-1.5 text-[9px] px-2 py-1 rounded-full"
-                    style={{ background: "#FFF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
-                    <span style={{ background: "rgba(201,151,60,0.3)", borderRadius: "2px", padding: "0 4px" }}>■</span>
-                    Đoạn được trích dẫn
-                  </div>
+                  {chunk.bo_nganh && chunk.ma_thu_tuc && (
+                    <a
+                      href={`${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-[9px] px-2 py-1 rounded-full transition-all hover:opacity-80"
+                      style={{ background: "#FFF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
+                      <ExternalLink className="w-3 h-3" />
+                      Mở tab mới
+                    </a>
+                  )}
                 </div>
-                <div className="flex-1 overflow-y-auto px-4 py-3"
-                  style={{ background: "white" }}>
-                  {renderPdfWithHighlight()}
+                <div className="flex-1 min-w-0" style={{ background: "white" }}>
+                  {chunk.bo_nganh && chunk.ma_thu_tuc ? (
+                    <iframe
+                      src={`${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`}
+                      className="w-full h-full"
+                      style={{ minHeight: "500px", border: "none" }}
+                      title="Tài liệu PDF gốc"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-sm" style={{ color: "#B8956A" }}>
+                      Không có file PDF cho tài liệu này
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -252,7 +269,7 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
           )}
         </div>
 
-        {chunk.pdf_content && (
+        {(chunk.pdf_content || chunk.bo_nganh) && (
           <div className="px-5 py-2 shrink-0 text-center"
             style={{ background: "#FDF5E6", borderTop: "1px solid rgba(201,151,60,0.15)" }}>
             <p className="text-[9px]" style={{ color: "#B8956A" }}>
