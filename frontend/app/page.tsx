@@ -10,6 +10,17 @@ import {
   MessageSquare, Clock, ChevronRight, Star,
   FileText, ExternalLink
 } from "lucide-react";
+import dynamic from "next/dynamic";
+
+// Dynamic import để tránh SSR issue với react-pdf
+const PdfViewer = dynamic(() => import("./PdfViewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full gap-2" style={{ color: "#E8C06A", background: "#525659" }}>
+      <span className="text-sm">Đang tải PDF viewer...</span>
+    </div>
+  ),
+});
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -58,8 +69,7 @@ interface ChatMessage {
 }
 
 function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => void }) {
-  const scorePercent = Math.round(chunk.score * 100);
-  const scoreTextColor = scorePercent >= 70 ? "#86efac" : scorePercent >= 50 ? "#fcd34d" : "#fca5a5";
+  const highlightRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -67,29 +77,71 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  // Tạo key phrase từ chunk content để search trong PDF
-  const getSearchPhrase = () => {
-    const clean = chunk.content.replace(/\.\.\.$/g, "").trim();
-    const firstLine = clean.split("\n")[0].trim();
-    // Lấy 6-8 từ đầu tiên để search — đủ unique, không quá dài
-    const words = (firstLine || clean).split(/\s+/).slice(0, 8).join(" ");
-    return encodeURIComponent(words);
-  };
+  // Scroll đến đoạn highlight sau khi render
+  useEffect(() => {
+    if (highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, []);
 
-  // URL PDF.js viewer hosted trong /public/pdfjs/
-  // PDF.js hỗ trợ highlight qua #search= fragment
-  const getPdfViewerUrl = () => {
-    if (!chunk.bo_nganh || !chunk.ma_thu_tuc) return null;
-    const pdfUrl = `${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`;
-    const search = getSearchPhrase();
-    // /pdfjs/web/viewer.html được deploy trong public/ folder của Next.js
-    return `/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}#search=${search}`;
-  };
+  const scorePercent = Math.round(chunk.score * 100);
+  const scoreTextColor = scorePercent >= 70 ? "#86efac" : scorePercent >= 50 ? "#fcd34d" : "#fca5a5";
 
-  const pdfViewerUrl = getPdfViewerUrl();
-  const pdfDirectUrl = chunk.bo_nganh && chunk.ma_thu_tuc
-    ? `${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`
-    : null;
+  // Tìm và highlight đoạn chunk trong pdf_content
+  const renderPdfWithHighlight = () => {
+    if (!chunk.pdf_content) return null;
+
+    // Lấy key phrase từ chunk content (bỏ "..." ở cuối)
+    const cleanChunk = chunk.content.replace(/\.\.\.$/g, "").trim();
+    // Thử match từng dòng đầu của chunk
+    const firstLine = cleanChunk.split("\n")[0].trim();
+    const keyPhrase = firstLine.length > 20 ? firstLine.slice(0, 80) : cleanChunk.slice(0, 80);
+
+    const pdfText = chunk.pdf_content;
+    const idx = pdfText.indexOf(keyPhrase);
+
+    if (idx === -1) {
+      // Không tìm thấy vị trí chính xác — hiện toàn bộ text bình thường
+      return (
+        <div className="whitespace-pre-wrap text-xs leading-relaxed" style={{ color: "#3D1A0E" }}>
+          {pdfText}
+        </div>
+      );
+    }
+
+    // Tìm điểm bắt đầu và kết thúc của đoạn cần highlight
+    // Mở rộng để highlight toàn bộ chunk (không chỉ keyPhrase)
+    const highlightStart = idx;
+    const highlightEnd = Math.min(idx + cleanChunk.length + 50, pdfText.length);
+
+    const before = pdfText.slice(0, highlightStart);
+    const highlighted = pdfText.slice(highlightStart, highlightEnd);
+    const after = pdfText.slice(highlightEnd);
+
+    return (
+      <div className="whitespace-pre-wrap text-xs leading-relaxed" style={{ color: "#3D1A0E" }}>
+        {before}
+        <span
+          ref={highlightRef}
+          style={{
+            background: "linear-gradient(135deg, rgba(201,151,60,0.35), rgba(232,192,106,0.25))",
+            borderLeft: "3px solid #C9973C",
+            borderRadius: "2px",
+            padding: "2px 6px",
+            fontWeight: 600,
+            color: "#5A3A1A",
+            boxDecorationBreak: "clone",
+            WebkitBoxDecorationBreak: "clone",
+          }}
+        >
+          {highlighted}
+        </span>
+        {after}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -171,22 +223,16 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
                 </div>
               </div>
 
-              {/* Cột phải: PDF.js viewer với highlight */}
+              {/* Cột phải: iframe PDF gốc */}
               <div className="flex-1 flex flex-col min-w-0">
                 <div className="px-4 py-3 shrink-0 border-b flex items-center justify-between"
                   style={{ borderColor: "rgba(201,151,60,0.2)", background: "white" }}>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[10px] font-bold tracking-widest" style={{ color: "#7B1818" }}>
-                      TÀI LIỆU PDF GỐC
-                    </p>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full"
-                      style={{ background: "#FFF5E6", color: "#C9973C", border: "1px solid #E8C06A" }}>
-                      Đoạn trích dẫn được tô vàng
-                    </span>
-                  </div>
-                  {pdfDirectUrl && (
+                  <p className="text-[10px] font-bold tracking-widest" style={{ color: "#7B1818" }}>
+                    TÀI LIỆU PDF GỐC
+                  </p>
+                  {chunk.bo_nganh && chunk.ma_thu_tuc && (
                     <a
-                      href={pdfDirectUrl}
+                      href={`${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-[9px] px-2 py-1 rounded-full transition-all hover:opacity-80"
@@ -196,14 +242,13 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
                     </a>
                   )}
                 </div>
-                <div className="flex-1 min-w-0" style={{ background: "#525659" }}>
-                  {pdfViewerUrl ? (
+                <div className="flex-1 min-w-0" style={{ background: "white" }}>
+                  {chunk.bo_nganh && chunk.ma_thu_tuc ? (
                     <iframe
-                      src={pdfViewerUrl}
+                      src={`${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`}
                       className="w-full h-full"
                       style={{ minHeight: "500px", border: "none" }}
-                      title="Tài liệu PDF gốc với highlight"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                      title="Tài liệu PDF gốc"
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-sm" style={{ color: "#B8956A" }}>
