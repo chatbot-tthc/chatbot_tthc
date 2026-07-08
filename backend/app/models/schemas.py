@@ -25,6 +25,8 @@ class RetrievedChunk(BaseModel):
     bo_nganh: Optional[str] = None
     score: float
     pdf_content: Optional[str] = None
+    section: Optional[str] = None
+    section_title: Optional[str] = None
 
 class ActionButton(BaseModel):         
     label: str

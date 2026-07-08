@@ -287,6 +287,8 @@ Truy vấn:"""
                 "bo_nganh": bo_nganh,
                 "score": norm_score,
                 "pdf_content": pdf_text,
+                "section": meta.get("section", ""),
+                "section_title": meta.get("section_title", ""),
             })
 
         action_buttons = _detect_action_buttons(question, answer)

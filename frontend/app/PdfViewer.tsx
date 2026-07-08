@@ -6,110 +6,139 @@ import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2 } from "lucide-react";
 
-// Dùng worker từ CDN — không cần copy file vào public
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
-  pdfUrl: string;          // URL file PDF từ backend
-  highlightText: string;   // Đoạn text cần highlight (chunk content)
+  pdfUrl: string;
+  highlightText: string;
+  sectionTitle?: string; // "Thành phần hồ sơ", "Trình tự thực hiện", "Lệ phí"...
 }
 
-// Normalize text để so sánh — bỏ dấu cách thừa, newline
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-function getKeyPhrase(text: string): string {
+// Lấy các từ khóa quan trọng từ chunk để highlight
+function getHighlightWords(text: string, sectionTitle?: string): string[] {
   const clean = text.replace(/\.\.\.$/g, "").trim();
-  const lines = clean.split("\n").map(l => l.trim()).filter(l => l.length > 15);
-  // Bỏ qua dòng đầu nếu chỉ là tên thủ tục
-  const skipPatterns = ["thủ tục:", "mục:", "phần:"];
-  const meaningfulLine = lines.find(l =>
-    !skipPatterns.some(p => l.toLowerCase().startsWith(p))
-  ) || lines[0] || clean;
-  return meaningfulLine.split(/\s+/).slice(0, 12).join(" ");
+
+  // Ưu tiên dùng section_title để tìm đúng vị trí trong PDF
+  if (sectionTitle && sectionTitle.length > 3) {
+    const sectionWords = normalizeText(sectionTitle).split(/\s+/).filter(w => w.length > 2);
+    return sectionWords;
+  }
+
+  // Fallback: lấy các từ có nghĩa từ chunk (bỏ từ phổ biến)
+  const stopWords = new Set(["thủ", "tục", "mục", "phần", "theo", "của", "và", "hoặc", "để", "cho", "với", "từ", "đến", "là", "có", "không", "được", "phải", "này", "đó"]);
+  const allWords = normalizeText(clean).split(/\s+/).filter(w => w.length > 3 && !stopWords.has(w));
+
+  // Lấy 8 từ có nghĩa nhất
+  return allWords.slice(0, 8);
 }
 
-export default function PdfViewer({ pdfUrl, highlightText }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.2);
-  const [targetPage, setTargetPage] = useState<number>(1);
+  const [targetPage, setTargetPage] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [searchDone, setSearchDone] = useState(false);
+  const [highlightWords, setHighlightWords] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const keyPhrase = getKeyPhrase(highlightText);
-  const normalizedPhrase = normalizeText(keyPhrase);
+  // Tính highlight words
+  useEffect(() => {
+    const words = getHighlightWords(highlightText, sectionTitle);
+    setHighlightWords(words);
+  }, [highlightText, sectionTitle]);
 
-  // Sau khi document load xong, tìm trang chứa đoạn text
   const onDocumentLoadSuccess = useCallback(async ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setLoading(false);
 
-    // Load từng trang để tìm đoạn text
+    const words = getHighlightWords(highlightText, sectionTitle);
+    if (words.length === 0) {
+      setSearchDone(true);
+      return;
+    }
+
     try {
       const loadingTask = pdfjs.getDocument(pdfUrl);
       const pdf = await loadingTask.promise;
 
+      let bestPage = 1;
+      let bestScore = 0;
+
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item) => ("str" in item ? item.str : "") || "")
-          .join(" ");
+        const pageText = normalizeText(
+          textContent.items.map((item) => ("str" in item ? item.str : "") || "").join(" ")
+        );
 
-        if (normalizeText(pageText).includes(normalizedPhrase)) {
-          setTargetPage(pageNum);
-          setCurrentPage(pageNum);
-          break;
+        // Đếm số từ khóa match trong trang này
+        const matchCount = words.filter(w => pageText.includes(w)).length;
+        const score = matchCount / words.length;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestPage = pageNum;
         }
+
+        // Nếu match > 60% từ khóa → dừng tìm kiếm sớm
+        if (score >= 0.6) break;
       }
+
+      setTargetPage(bestPage);
+      setCurrentPage(bestPage);
       setSearchDone(true);
     } catch (e) {
       console.error("Error searching PDF:", e);
       setSearchDone(true);
     }
-  }, [pdfUrl, normalizedPhrase]);
+  }, [pdfUrl, highlightText, sectionTitle]);
 
-  // Scroll đến trang target sau khi tìm được
+  // Scroll đến trang target
   useEffect(() => {
-    if (searchDone && targetPage > 1) {
+    if (searchDone && targetPage >= 1) {
       setTimeout(() => {
         const pageEl = pageRefs.current[targetPage - 1];
         if (pageEl) {
           pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
         }
-      }, 300);
+      }, 400);
     }
   }, [searchDone, targetPage]);
 
-  // Custom text renderer — highlight đúng đoạn
+  // Highlight text trong PDF
   const customTextRenderer = useCallback(
     ({ str, pageIndex }: { str: string; pageIndex: number }) => {
-      // Chỉ highlight ở trang target
       if (pageIndex + 1 !== targetPage) return str;
-      if (!str) return str;
+      if (!str || highlightWords.length === 0) return str;
 
       const normalizedStr = normalizeText(str);
-      const words = normalizedPhrase.split(" ").filter(w => w.length > 3);
 
-      // Kiểm tra xem string này có chứa từ khóa không
-      const hasMatch = words.some(word => normalizedStr.includes(word));
+      // Match nếu có ít nhất 1 từ khóa quan trọng
+      const hasMatch = highlightWords.some(word => normalizedStr.includes(word));
       if (!hasMatch) return str;
 
-      // Highlight toàn bộ text item nếu match
-      return `<mark style="background: rgba(201,151,60,0.45); border-radius: 2px; padding: 1px 0;">${str}</mark>`;
+      return `<mark style="background: rgba(201,151,60,0.5); border-radius: 2px; padding: 1px 0; font-weight: 600;">${str}</mark>`;
     },
-    [targetPage, normalizedPhrase]
+    [targetPage, highlightWords]
   );
+
+  const scrollToTarget = () => {
+    const pageEl = pageRefs.current[targetPage - 1];
+    if (pageEl) pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 shrink-0 border-b"
         style={{ borderColor: "rgba(201,151,60,0.2)", background: "#FDF5E6" }}>
+
         {/* Điều hướng trang */}
         <div className="flex items-center gap-1.5">
           <button
@@ -120,7 +149,7 @@ export default function PdfViewer({ pdfUrl, highlightText }: PdfViewerProps) {
             <ChevronLeft className="w-3 h-3" style={{ color: "#7B1818" }} />
           </button>
           <span className="text-[10px] font-medium px-2" style={{ color: "#5A3A1A" }}>
-            {currentPage} / {numPages}
+            {currentPage} / {numPages || "..."}
           </span>
           <button
             onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
@@ -131,13 +160,16 @@ export default function PdfViewer({ pdfUrl, highlightText }: PdfViewerProps) {
           </button>
         </div>
 
-        {/* Zoom */}
+        {/* Badge + Zoom */}
         <div className="flex items-center gap-1.5">
-          {targetPage > 0 && searchDone && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(201,151,60,0.15)", color: "#C9973C", border: "1px solid #E8C06A" }}>
-              Đoạn trích dẫn ở trang {targetPage}
-            </span>
+          {searchDone && targetPage >= 1 && (
+            <button
+              onClick={scrollToTarget}
+              className="text-[9px] px-2 py-0.5 rounded-full transition-all hover:opacity-80"
+              style={{ background: "rgba(201,151,60,0.2)", color: "#7B1818", border: "1px solid #E8C06A" }}
+              title="Bấm để scroll đến đoạn trích dẫn">
+              {sectionTitle ? `📌 ${sectionTitle}` : `📍 Trang ${targetPage}`}
+            </button>
           )}
           <button
             onClick={() => setScale(s => Math.max(0.6, s - 0.2))}
@@ -157,11 +189,11 @@ export default function PdfViewer({ pdfUrl, highlightText }: PdfViewerProps) {
         </div>
       </div>
 
-      {/* PDF Content */}
+      {/* PDF Content — chỉ render trang hiện tại để tăng tốc */}
       <div ref={containerRef} className="flex-1 overflow-y-auto"
         style={{ background: "#525659" }}>
         {loading && (
-          <div className="flex items-center justify-center h-full gap-2" style={{ color: "#E8C06A" }}>
+          <div className="flex items-center justify-center h-48 gap-2" style={{ color: "#E8C06A" }}>
             <Loader2 className="w-5 h-5 animate-spin" />
             <span className="text-sm">Đang tải PDF...</span>
           </div>
@@ -180,10 +212,9 @@ export default function PdfViewer({ pdfUrl, highlightText }: PdfViewerProps) {
               ref={el => { pageRefs.current[pageNum - 1] = el; }}
               className="shadow-xl"
               style={{
-                border: pageNum === targetPage
-                  ? "2px solid #C9973C"
-                  : "2px solid transparent",
+                border: pageNum === targetPage ? "2px solid #C9973C" : "2px solid transparent",
                 borderRadius: "4px",
+                outline: pageNum === targetPage ? "3px solid rgba(201,151,60,0.3)" : "none",
               }}
             >
               <Page
@@ -193,14 +224,13 @@ export default function PdfViewer({ pdfUrl, highlightText }: PdfViewerProps) {
                 renderAnnotationLayer={true}
                 customTextRenderer={customTextRenderer}
                 onRenderSuccess={() => {
-                  // Scroll sau khi trang target render xong
                   if (pageNum === targetPage && searchDone) {
                     setTimeout(() => {
                       pageRefs.current[pageNum - 1]?.scrollIntoView({
                         behavior: "smooth",
                         block: "start",
                       });
-                    }, 100);
+                    }, 200);
                   }
                 }}
               />
