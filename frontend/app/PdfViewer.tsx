@@ -19,11 +19,15 @@ function normalizeText(text: string): string {
   return text.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-// Lấy key phrase từ chunk — 10 từ đầu tiên, bỏ "..."
 function getKeyPhrase(text: string): string {
   const clean = text.replace(/\.\.\.$/g, "").trim();
-  const firstLine = clean.split("\n")[0].trim();
-  return (firstLine || clean).split(/\s+/).slice(0, 10).join(" ");
+  const lines = clean.split("\n").map(l => l.trim()).filter(l => l.length > 15);
+  // Bỏ qua dòng đầu nếu chỉ là tên thủ tục
+  const skipPatterns = ["thủ tục:", "mục:", "phần:"];
+  const meaningfulLine = lines.find(l =>
+    !skipPatterns.some(p => l.toLowerCase().startsWith(p))
+  ) || lines[0] || clean;
+  return meaningfulLine.split(/\s+/).slice(0, 12).join(" ");
 }
 
 export default function PdfViewer({ pdfUrl, highlightText }: PdfViewerProps) {
