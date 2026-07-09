@@ -51,6 +51,8 @@ interface RetrievedChunk {
   bo_nganh?: string;
   score: number;
   pdf_content?: string;
+  section?: string;
+  section_title?: string;
 }
 
 interface ActionButton {
@@ -247,6 +249,7 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
                     <PdfViewer
                       pdfUrl={`${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`}
                       highlightText={chunk.content}
+                      sectionTitle={chunk.section_title}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-sm" style={{ color: "#B8956A" }}>
