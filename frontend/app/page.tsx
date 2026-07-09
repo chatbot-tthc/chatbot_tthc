@@ -853,12 +853,22 @@ export default function Home() {
                               style={{ color: "#C9973C" }}
                             >
                               <FileText className="w-3.5 h-3.5" />
-                              Nguồn tham khảo ({msg.retrieved_chunks.length}) — bấm vào để xem nội dung
+                              Nguồn tham khảo — bấm vào để xem nội dung
                             </summary>
                             <div className="mt-2 flex flex-wrap gap-1.5">
-                              {msg.retrieved_chunks.map((c, j) => (
-                                <ChunkChip key={j} chunk={c} />
-                              ))}
+                              {(() => {
+                                // Dedup: mỗi ma_thu_tuc chỉ giữ 1 chip (score cao nhất)
+                                const seen = new Map<string, RetrievedChunk>();
+                                msg.retrieved_chunks!.forEach(c => {
+                                  const key = c.ma_thu_tuc || c.document_title;
+                                  if (!seen.has(key) || c.score > seen.get(key)!.score) {
+                                    seen.set(key, c);
+                                  }
+                                });
+                                return Array.from(seen.values()).map((c, j) => (
+                                  <ChunkChip key={j} chunk={c} />
+                                ));
+                              })()}
                             </div>
                           </details>
                         )}

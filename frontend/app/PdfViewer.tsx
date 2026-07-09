@@ -103,7 +103,7 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
 
       // Highlight nếu text item là heading section
       if (targetSection && normalizedStr.includes(normalizeText(targetSection))) {
-        return `<mark style="background: rgba(201,151,60,0.6); border-radius: 3px; padding: 2px 4px; font-weight: 700; outline: 2px solid #C9973C;">${str}</mark>`;
+        return `<mark style="background: rgba(201,151,60,0.5); border-radius: 2px;">${str}</mark>`;
       }
 
       // Highlight các từ quan trọng từ chunk content — KHÔNG tô từ phổ biến
@@ -115,7 +115,7 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
 
       const hasSpecificMatch = chunkWords.some(w => normalizedStr.includes(normalizeText(w)));
       if (hasSpecificMatch) {
-        return `<mark style="background: rgba(201,151,60,0.25); border-radius: 2px; padding: 1px 0;">${str}</mark>`;
+        return `<mark style="background: rgba(201,151,60,0.25);">${str}</mark>`;
       }
 
       return str;
@@ -126,6 +126,30 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
   const scrollToTarget = () => {
     pageRefs.current[targetPage - 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  // Track trang hiện tại khi scroll
+  useEffect(() => {
+    if (numPages === 0) return;
+    const observers: IntersectionObserver[] = [];
+
+    pageRefs.current.forEach((el, idx) => {
+      if (!el) return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              setCurrentPage(idx + 1);
+            }
+          });
+        },
+        { threshold: 0.5 }
+      );
+      observer.observe(el);
+      observers.push(observer);
+    });
+
+    return () => observers.forEach(o => o.disconnect());
+  }, [numPages]);
 
   return (
     <div className="flex flex-col h-full">
