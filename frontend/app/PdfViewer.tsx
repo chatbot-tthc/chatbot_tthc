@@ -11,64 +11,49 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pd
 interface PdfViewerProps {
   pdfUrl: string;
   highlightText: string;
-  sectionTitle?: string; // "Thành phần hồ sơ", "Trình tự thực hiện", "Lệ phí"...
+  sectionTitle?: string;
 }
 
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-// Lấy các từ khóa quan trọng từ chunk để highlight
-function getHighlightWords(text: string, sectionTitle?: string): string[] {
-  const clean = text.replace(/\.\.\.$/g, "").trim();
-
-  // Ưu tiên dùng section_title để tìm đúng vị trí trong PDF
-  if (sectionTitle && sectionTitle.length > 3) {
-    const sectionWords = normalizeText(sectionTitle).split(/\s+/).filter(w => w.length > 2);
-    return sectionWords;
-  }
-
-  // Fallback: lấy các từ có nghĩa từ chunk (bỏ từ phổ biến)
-  const stopWords = new Set(["thủ", "tục", "mục", "phần", "theo", "của", "và", "hoặc", "để", "cho", "với", "từ", "đến", "là", "có", "không", "được", "phải", "này", "đó"]);
-  const allWords = normalizeText(clean).split(/\s+/).filter(w => w.length > 3 && !stopWords.has(w));
-
-  // Lấy 8 từ có nghĩa nhất
-  return allWords.slice(0, 8);
-}
+// Map section_title → các heading xuất hiện trong PDF
+const SECTION_HEADINGS: Record<string, string[]> = {
+  "thành phần hồ sơ": ["thành phần hồ sơ", "hồ sơ bao gồm", "giấy tờ cần nộp"],
+  "trình tự thực hiện": ["trình tự thực hiện", "các bước thực hiện", "quy trình"],
+  "cách thức thực hiện": ["cách thức thực hiện", "hình thức nộp", "lệ phí"],
+  "thời hạn giải quyết": ["thời hạn giải quyết", "thời gian giải quyết"],
+  "lệ phí": ["lệ phí", "mức phí", "miễn phí"],
+  "căn cứ pháp lý": ["căn cứ pháp lý", "cơ sở pháp lý", "văn bản pháp luật"],
+  "kết quả thực hiện": ["kết quả thực hiện", "kết quả giải quyết"],
+  "yêu cầu điều kiện": ["yêu cầu", "điều kiện"],
+};
 
 export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.2);
   const [targetPage, setTargetPage] = useState<number>(0);
+  const [targetSection, setTargetSection] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [searchDone, setSearchDone] = useState(false);
-  const [highlightWords, setHighlightWords] = useState<string[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Tính highlight words
-  useEffect(() => {
-    const words = getHighlightWords(highlightText, sectionTitle);
-    setHighlightWords(words);
-  }, [highlightText, sectionTitle]);
 
   const onDocumentLoadSuccess = useCallback(async ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setLoading(false);
 
-    const words = getHighlightWords(highlightText, sectionTitle);
-    if (words.length === 0) {
-      setSearchDone(true);
-      return;
-    }
-
     try {
       const loadingTask = pdfjs.getDocument(pdfUrl);
       const pdf = await loadingTask.promise;
 
-      let bestPage = 1;
-      let bestScore = 0;
+      // Lấy headings cần tìm dựa vào section_title
+      const normalizedSection = normalizeText(sectionTitle || "");
+      const headings = SECTION_HEADINGS[normalizedSection] || [normalizedSection];
+
+      let foundPage = 0;
+      let foundHeading = "";
 
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
@@ -77,60 +62,69 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
           textContent.items.map((item) => ("str" in item ? item.str : "") || "").join(" ")
         );
 
-        // Đếm số từ khóa match trong trang này
-        const matchCount = words.filter(w => pageText.includes(w)).length;
-        const score = matchCount / words.length;
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestPage = pageNum;
+        // Tìm heading section trong trang này
+        const matchedHeading = headings.find(h => pageText.includes(normalizeText(h)));
+        if (matchedHeading) {
+          foundPage = pageNum;
+          foundHeading = matchedHeading;
+          break;
         }
-
-        // Nếu match > 60% từ khóa → dừng tìm kiếm sớm
-        if (score >= 0.6) break;
       }
 
-      setTargetPage(bestPage);
-      setCurrentPage(bestPage);
+      if (foundPage > 0) {
+        setTargetPage(foundPage);
+        setTargetSection(foundHeading);
+        setCurrentPage(foundPage);
+      }
       setSearchDone(true);
     } catch (e) {
-      console.error("Error searching PDF:", e);
+      console.error("PDF search error:", e);
       setSearchDone(true);
     }
-  }, [pdfUrl, highlightText, sectionTitle]);
+  }, [pdfUrl, sectionTitle]);
 
   // Scroll đến trang target
   useEffect(() => {
     if (searchDone && targetPage >= 1) {
       setTimeout(() => {
-        const pageEl = pageRefs.current[targetPage - 1];
-        if (pageEl) {
-          pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        pageRefs.current[targetPage - 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 400);
     }
   }, [searchDone, targetPage]);
 
-  // Highlight text trong PDF
+  // Highlight CHỈ đúng heading section — không tô tràn lan
   const customTextRenderer = useCallback(
     ({ str, pageIndex }: { str: string; pageIndex: number }) => {
-      if (pageIndex + 1 !== targetPage) return str;
-      if (!str || highlightWords.length === 0) return str;
-
+      if (!str) return str;
       const normalizedStr = normalizeText(str);
 
-      // Match nếu có ít nhất 1 từ khóa quan trọng
-      const hasMatch = highlightWords.some(word => normalizedStr.includes(word));
-      if (!hasMatch) return str;
+      // Chỉ highlight ở trang target
+      if (pageIndex + 1 !== targetPage) return str;
 
-      return `<mark style="background: rgba(201,151,60,0.5); border-radius: 2px; padding: 1px 0; font-weight: 600;">${str}</mark>`;
+      // Highlight nếu text item là heading section
+      if (targetSection && normalizedStr.includes(normalizeText(targetSection))) {
+        return `<mark style="background: rgba(201,151,60,0.6); border-radius: 3px; padding: 2px 4px; font-weight: 700; outline: 2px solid #C9973C;">${str}</mark>`;
+      }
+
+      // Highlight các từ quan trọng từ chunk content — KHÔNG tô từ phổ biến
+      const chunkWords = highlightText
+        .replace(/\.\.\.$/g, "")
+        .split(/\s+/)
+        .filter(w => w.length > 6) // Chỉ từ dài > 6 ký tự = từ có nghĩa riêng biệt
+        .slice(0, 5);
+
+      const hasSpecificMatch = chunkWords.some(w => normalizedStr.includes(normalizeText(w)));
+      if (hasSpecificMatch) {
+        return `<mark style="background: rgba(201,151,60,0.25); border-radius: 2px; padding: 1px 0;">${str}</mark>`;
+      }
+
+      return str;
     },
-    [targetPage, highlightWords]
+    [targetPage, targetSection, highlightText]
   );
 
   const scrollToTarget = () => {
-    const pageEl = pageRefs.current[targetPage - 1];
-    if (pageEl) pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    pageRefs.current[targetPage - 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -138,85 +132,72 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 shrink-0 border-b"
         style={{ borderColor: "rgba(201,151,60,0.2)", background: "#FDF5E6" }}>
-
-        {/* Điều hướng trang */}
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage <= 1}
-            className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-40 transition-all hover:bg-white"
+            className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-40 hover:bg-white"
             style={{ border: "1px solid rgba(201,151,60,0.3)" }}>
             <ChevronLeft className="w-3 h-3" style={{ color: "#7B1818" }} />
           </button>
           <span className="text-[10px] font-medium px-2" style={{ color: "#5A3A1A" }}>
             {currentPage} / {numPages || "..."}
           </span>
-          <button
-            onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
+          <button onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
             disabled={currentPage >= numPages}
-            className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-40 transition-all hover:bg-white"
+            className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-40 hover:bg-white"
             style={{ border: "1px solid rgba(201,151,60,0.3)" }}>
             <ChevronRight className="w-3 h-3" style={{ color: "#7B1818" }} />
           </button>
         </div>
 
-        {/* Badge + Zoom */}
         <div className="flex items-center gap-1.5">
           {searchDone && targetPage >= 1 && (
-            <button
-              onClick={scrollToTarget}
+            <button onClick={scrollToTarget}
               className="text-[9px] px-2 py-0.5 rounded-full transition-all hover:opacity-80"
-              style={{ background: "rgba(201,151,60,0.2)", color: "#7B1818", border: "1px solid #E8C06A" }}
-              title="Bấm để scroll đến đoạn trích dẫn">
-              {sectionTitle ? `📌 ${sectionTitle}` : `📍 Trang ${targetPage}`}
+              style={{ background: "rgba(201,151,60,0.2)", color: "#7B1818", border: "1px solid #E8C06A" }}>
+              📌 {sectionTitle || `Trang ${targetPage}`}
             </button>
           )}
-          <button
-            onClick={() => setScale(s => Math.max(0.6, s - 0.2))}
-            className="w-6 h-6 rounded-lg flex items-center justify-center transition-all hover:bg-white"
+          <button onClick={() => setScale(s => Math.max(0.6, s - 0.2))}
+            className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-white"
             style={{ border: "1px solid rgba(201,151,60,0.3)" }}>
             <ZoomOut className="w-3 h-3" style={{ color: "#7B1818" }} />
           </button>
           <span className="text-[10px] font-medium w-10 text-center" style={{ color: "#5A3A1A" }}>
             {Math.round(scale * 100)}%
           </span>
-          <button
-            onClick={() => setScale(s => Math.min(2.5, s + 0.2))}
-            className="w-6 h-6 rounded-lg flex items-center justify-center transition-all hover:bg-white"
+          <button onClick={() => setScale(s => Math.min(2.5, s + 0.2))}
+            className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-white"
             style={{ border: "1px solid rgba(201,151,60,0.3)" }}>
             <ZoomIn className="w-3 h-3" style={{ color: "#7B1818" }} />
           </button>
         </div>
       </div>
 
-      {/* PDF Content — chỉ render trang hiện tại để tăng tốc */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto"
-        style={{ background: "#525659" }}>
+      {/* PDF Content */}
+      <div className="flex-1 overflow-y-auto" style={{ background: "#525659" }}>
         {loading && (
           <div className="flex items-center justify-center h-48 gap-2" style={{ color: "#E8C06A" }}>
             <Loader2 className="w-5 h-5 animate-spin" />
             <span className="text-sm">Đang tải PDF...</span>
           </div>
         )}
-
         <Document
           file={pdfUrl}
           onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={(err) => { console.error("PDF load error:", err); setLoading(false); }}
+          onLoadError={() => setLoading(false)}
           loading=""
           className="flex flex-col items-center py-4 gap-4"
         >
           {Array.from({ length: numPages }, (_, i) => i + 1).map(pageNum => (
-            <div
-              key={pageNum}
+            <div key={pageNum}
               ref={el => { pageRefs.current[pageNum - 1] = el; }}
               className="shadow-xl"
               style={{
                 border: pageNum === targetPage ? "2px solid #C9973C" : "2px solid transparent",
                 borderRadius: "4px",
                 outline: pageNum === targetPage ? "3px solid rgba(201,151,60,0.3)" : "none",
-              }}
-            >
+              }}>
               <Page
                 pageNumber={pageNum}
                 scale={scale}
@@ -226,10 +207,7 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
                 onRenderSuccess={() => {
                   if (pageNum === targetPage && searchDone) {
                     setTimeout(() => {
-                      pageRefs.current[pageNum - 1]?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      });
+                      pageRefs.current[pageNum - 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
                     }, 200);
                   }
                 }}
