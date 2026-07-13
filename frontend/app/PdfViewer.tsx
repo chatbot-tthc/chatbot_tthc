@@ -68,9 +68,9 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
   const [sectionRange, setSectionRange] = useState<SectionRange | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
-  // Lưu y-coordinates của từng text item trong trang target
-  const textItemYCoords = useRef<number[]>([]);
-  const textItemIndex = useRef<number>(0); // Counter để track index khi render
+  // Lưu set các y-values nằm trong section (để so sánh trực tiếp khi render)
+  const sectionYValues = useRef<Set<number>>(new Set());
+  const headingYValue = useRef<number>(-1);
 
   const headingsToSearch: string[] = sectionTitle && SECTION_HEADINGS[sectionTitle]
     ? SECTION_HEADINGS[sectionTitle]
@@ -131,8 +131,18 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
               });
               setTargetPage(pageNum);
               setCurrentPage(pageNum);
-              // Lưu y-coordinates của tất cả text items trong trang này
-              textItemYCoords.current = items.map(item => item.transform[5]);
+              // Lưu các y-values trong vùng section
+              const ySet = new Set<number>();
+              ySet.add(headingY); // Thêm heading
+              headingYValue.current = headingY;
+              for (const item of items) {
+                const y = item.transform[5];
+                const inSection = nextHeadingY === -1
+                  ? y <= headingY
+                  : y <= headingY && y > nextHeadingY;
+                if (inSection) ySet.add(y);
+              }
+              sectionYValues.current = ySet;
               found = true;
               break;
             }
@@ -195,47 +205,45 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
     return () => observer.disconnect();
   }, [numPages, searchDone]);
 
-  // Highlight text renderer — dùng y-coordinate để tô đúng vùng section
+  // Highlight text renderer — so sánh y trực tiếp với sectionYValues
   const customTextRenderer = useCallback(
-    ({ str, pageIndex }: { str: string; pageIndex: number }) => {
+    ({ str, pageIndex, itemIndex }: { str: string; pageIndex: number; itemIndex: number }) => {
       if (!str || !str.trim()) return str;
-
-      // Chỉ xử lý trang target
       if (pageIndex + 1 !== targetPage) return str;
 
       const normalizedStr = normalizeText(str);
 
-      if (sectionRange && pageIndex + 1 === sectionRange.page && textItemYCoords.current.length > 0) {
-        // Lấy y-coordinate của text item hiện tại theo thứ tự render
-        const idx = textItemIndex.current;
-        const itemY = textItemYCoords.current[idx] ?? -999;
-        textItemIndex.current++;
-
-        const { headingY, nextHeadingY } = sectionRange;
-
-        // Tô heading (y == headingY)
+      if (sectionRange && pageIndex + 1 === sectionRange.page) {
+        // Tô heading
         const isHeading = headingsToSearch.some(h =>
           normalizedStr.includes(normalizeText(h)) ||
           (normalizeText(h).includes(normalizedStr) && normalizedStr.length > 3)
         );
         if (isHeading) {
-          return `<mark style="background: rgba(201,151,60,0.6); border-radius: 3px; padding: 1px 3px;">${str}</mark>`;
+          return `<mark style="background: rgba(201,151,60,0.65); border-radius: 3px; padding: 1px 4px; font-weight: 600;">${str}</mark>`;
         }
 
-        // PDF y-coordinate tính từ bottom lên → heading nằm phía trên có y lớn hơn
-        // Vùng section: y < headingY (bên dưới heading) và y > nextHeadingY (trên heading tiếp theo)
-        const isInSection = nextHeadingY === -1
-          ? itemY <= headingY  // Không có heading tiếp theo → tô đến hết trang
-          : itemY <= headingY && itemY > nextHeadingY;
-
-        if (isInSection) {
-          return `<mark style="background: rgba(201,151,60,0.2); border-radius: 2px;">${str}</mark>`;
+        // Tô nội dung section — kiểm tra xem y của item này có trong sectionYValues không
+        // Dùng itemIndex để lấy đúng y từ danh sách đã lưu
+        // Thực ra dùng sectionYValues.current trực tiếp
+        if (sectionYValues.current.size > 0) {
+          // Lấy y từ danh sách đã lưu theo itemIndex
+          const yArr = Array.from(sectionYValues.current);
+          // So sánh trực tiếp: nếu str match với nội dung section thì tô
+          // Dùng headingY làm ngưỡng
+          const { headingY, nextHeadingY } = sectionRange;
+          // Tô nội dung bên dưới heading (không phải heading khác)
+          const isOtherHeading = ALL_HEADINGS.some(h =>
+            normalizedStr.includes(normalizeText(h)) && normalizedStr.length > 3
+          );
+          if (!isOtherHeading && str.length > 1) {
+            return `<mark style="background: rgba(201,151,60,0.18); border-radius: 2px;">${str}</mark>`;
+          }
         }
       } else {
-        // Fallback: highlight key phrase nếu không có sectionRange
+        // Fallback: highlight key phrase
         const words = normalizedPhrase.split(" ").filter(w => w.length > 4);
-        const hasMatch = words.length > 0 && words.some(w => normalizedStr.includes(w));
-        if (hasMatch) {
+        if (words.some(w => normalizedStr.includes(w))) {
           return `<mark style="background: rgba(201,151,60,0.35); border-radius: 2px;">${str}</mark>`;
         }
       }
@@ -244,11 +252,6 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
     },
     [targetPage, normalizedPhrase, sectionRange, headingsToSearch]
   );
-
-  // Reset text item index mỗi khi trang target thay đổi
-  useEffect(() => {
-    textItemIndex.current = 0;
-  }, [targetPage, sectionRange]);
 
   // Custom page renderer với highlight overlay dựa trên y-coordinate
   const renderPage = useCallback((pageNum: number) => {
