@@ -1,6 +1,6 @@
 """
 Database models (A0.3) — Schema PostgreSQL
-Tables: users, documents, chat_sessions, chat_messages, api_logs
+Tables: users, documents, chat_sessions, chat_messages, api_logs, agencies
 """
 from datetime import datetime
 from sqlalchemy import (
@@ -39,6 +39,23 @@ class Document(Base):
     indexed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     metadata_json = Column(JSON, nullable=True)
+
+
+class Agency(Base):
+    """Bộ/ngành nguồn dữ liệu — quản lý bật/tắt và crawl (module Quản lý Dữ liệu Bộ/Ngành)."""
+    __tablename__ = "agencies"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code = Column(String(100), unique=True, nullable=False, index=True)  # khớp metadata "bo_nganh" trong ChromaDB, VD "bo-tu-phap"
+    display_name = Column(String(255), nullable=False)  # "Bộ Tư pháp"
+    is_active = Column(Boolean, default=True, nullable=False)  # cột toggle — RAG chỉ tìm trong các bộ is_active=True
+    thu_tuc_count = Column(Integer, default=0, nullable=False)  # cache số thủ tục, cập nhật sau mỗi lần crawl/seed
+    crawl_status = Column(String(20), default="idle", nullable=False)  # idle | crawling | failed
+    last_crawled_at = Column(DateTime(timezone=True), nullable=True)
+    last_crawl_error = Column(Text, nullable=True)
+    source_excel = Column(String(255), nullable=True)  # tên file Excel danh sách mã thủ tục dùng để crawl bộ này
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class ChatSession(Base):
