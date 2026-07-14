@@ -249,7 +249,7 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
                     <PdfViewer
                       pdfUrl={`${API_URL}/api/v1/pdf/${chunk.bo_nganh}/${chunk.ma_thu_tuc}.pdf`}
                       highlightText={chunk.content}
-                      sectionTitle={chunk.section_title}
+                      sectionTitle={chunk.section}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-sm" style={{ color: "#B8956A" }}>
