@@ -207,7 +207,7 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
 
   // Highlight text renderer — so sánh y trực tiếp với sectionYValues
   const customTextRenderer = useCallback(
-    ({ str, pageIndex, itemIndex }: { str: string; pageIndex: number; itemIndex: number }) => {
+    ({ str, pageIndex, itemIndex, transform }: { str: string; pageIndex: number; itemIndex: number; transform: number[] }) => {
       if (!str || !str.trim()) return str;
       if (pageIndex + 1 !== targetPage) return str;
 
@@ -223,23 +223,15 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
           return `<mark style="background: rgba(201,151,60,0.65); border-radius: 3px; padding: 1px 4px; font-weight: 600;">${str}</mark>`;
         }
 
-        // Tô nội dung section — kiểm tra xem y của item này có trong sectionYValues không
-        // Dùng itemIndex để lấy đúng y từ danh sách đã lưu
-        // Thực ra dùng sectionYValues.current trực tiếp
-        if (sectionYValues.current.size > 0) {
-          // Lấy y từ danh sách đã lưu theo itemIndex
-          const yArr = Array.from(sectionYValues.current);
-          // So sánh trực tiếp: nếu str match với nội dung section thì tô
-          // Dùng headingY làm ngưỡng
-          const { headingY, nextHeadingY } = sectionRange;
-          // Tô nội dung bên dưới heading (không phải heading khác)
-          const isOtherHeading = ALL_HEADINGS.some(h =>
-            normalizedStr.includes(normalizeText(h)) && normalizedStr.length > 3
-          );
-          if (!isOtherHeading && str.length > 1) {
-            return `<mark style="background: rgba(201,151,60,0.18); border-radius: 2px;">${str}</mark>`;
-          }
-        }
+        // Tô nội dung section — so sánh trực tiếp y-coordinate của item này
+const y = transform[5];
+const { headingY, nextHeadingY } = sectionRange;
+const inSection = nextHeadingY === -1
+  ? y < headingY
+  : y < headingY && y > nextHeadingY;
+if (inSection) {
+  return `<mark style="background: rgba(201,151,60,0.18); border-radius: 2px;">${str}</mark>`;
+}
       } else {
         // Fallback: highlight key phrase
         const words = normalizedPhrase.split(" ").filter(w => w.length > 4);
