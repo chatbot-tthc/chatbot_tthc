@@ -54,6 +54,8 @@ services:
       - ./data:/app/data
       - ./backend/pdf_data:/app/pdf_data:ro
       - ./scripts:/app/scripts
+      - hf_cache:/root/.cache/huggingface
 
 volumes:
   postgres_data:
+  hf_cache:
