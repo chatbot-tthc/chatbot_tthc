@@ -56,6 +56,31 @@ class SessionResponse(BaseModel):
         from_attributes = True
 
 
+# ── Agencies (Quản lý Dữ liệu Bộ/Ngành) ──────────────────
+class AgencyResponse(BaseModel):
+    id: UUID
+    code: str
+    display_name: str
+    is_active: bool
+    thu_tuc_count: int
+    crawl_status: str
+    last_crawled_at: Optional[datetime] = None
+    last_crawl_error: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AgencyToggleRequest(BaseModel):
+    is_active: bool
+
+
+class AgencyCrawlAcceptedResponse(BaseModel):
+    code: str
+    crawl_status: str
+    message: str
+
+
 # ── Health ─────────────────────────────────────────────
 class HealthResponse(BaseModel):
     status: str

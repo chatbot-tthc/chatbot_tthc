@@ -6,6 +6,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Chromium cho Playwright (crawler — module Quản lý Dữ liệu Bộ/Ngành)
+RUN playwright install --with-deps chromium
+
 # Copy source
 COPY . .
 

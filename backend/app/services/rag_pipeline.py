@@ -9,6 +9,7 @@ import pdfplumber
 from pathlib import Path
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.core.config import settings
+from app.services.agency_filter import get_active_agency_codes
 import math
 from google import genai
 
@@ -147,9 +148,15 @@ Truy vấn:"""
         except Exception:
             return question  # Fallback về câu gốc nếu lỗi
 
-    def _retrieve(self, question: str):
+    async def _retrieve(self, question: str):
         collection = self._get_collection()
         queries = _expand_query(question)
+
+        # Chỉ tìm trong các bộ/ngành đang bật (module Quản lý Dữ liệu Bộ/Ngành).
+        # None nghĩa là chưa cấu hình gì (bảng agencies trống) -> không lọc gì cả.
+        active_codes = await get_active_agency_codes()
+        where_filter = {"bo_nganh": {"$in": active_codes}} if active_codes is not None else None
+
         seen_contents = {}
         for q in queries:
             q_embedding = self._embed_query(q)
@@ -157,6 +164,7 @@ Truy vấn:"""
                 query_embeddings=[q_embedding],
                 n_results=settings.RETRIEVAL_TOP_K,
                 include=["documents", "metadatas", "distances"],
+                where=where_filter,
             )
             docs = results["documents"][0] if results["documents"] else []
             dists = results["distances"][0] if results["distances"] else []
@@ -237,7 +245,7 @@ Truy vấn:"""
     async def query(self, question: str) -> dict:
         # Rewrite query để cải thiện retrieval accuracy
         rewritten_question = await self._rewrite_query(question)
-        chunks, distances, metadatas = self._retrieve(rewritten_question)
+        chunks, distances, metadatas = await self._retrieve(rewritten_question)
 
         if self._check_fallback(distances):
             return {

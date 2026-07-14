@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1 import health, chat, stats
-from app.api.v1 import hoso, pdf 
+from app.api.v1 import hoso, pdf, agencies
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -26,7 +26,8 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(hoso.router, prefix="/api/v1/hoso")
-app.include_router(pdf.router, prefix="/api/v1/pdf")  
+app.include_router(pdf.router, prefix="/api/v1/pdf")
+app.include_router(agencies.router, prefix="/api/v1/agencies")
 
 
 @app.get("/", tags=["Root"])

@@ -172,13 +172,13 @@ def crawl_one(page, ma_so):
     data.update(extract_sections_raw(body))
     return data
 
-def main():
+def main(excel_file: str = EXCEL_FILE):
     Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-    if not os.path.exists(EXCEL_FILE):
-        print(f"[ERROR] Không tìm thấy: {EXCEL_FILE}")
+    if not os.path.exists(excel_file):
+        print(f"[ERROR] Không tìm thấy: {excel_file}")
         return
 
-    ma_so_list = load_ma_so(EXCEL_FILE)
+    ma_so_list = load_ma_so(excel_file)
     # Kiểm tra cả flat lẫn subdirs
     done = {f.stem for f in Path(OUTPUT_DIR).glob("**/*.json")}
     todo = [m for m in ma_so_list if m not in done]
@@ -421,7 +421,22 @@ def download_pdf():
 # ═══════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bo-nganh", help="Code bộ ngành (VD bo-tu-phap) — tự tra Excel tương ứng trong ALL_EXCELS")
+    parser.add_argument("--excel", help="Đường dẫn Excel tùy chỉnh (ghi đè --bo-nganh)")
+    args = parser.parse_args()
+
+    selected_excel = args.excel
+    if not selected_excel and args.bo_nganh:
+        selected_excel = ALL_EXCELS.get(args.bo_nganh)
+        if not selected_excel:
+            print(f"[ERROR] Không rõ Excel cho bộ ngành '{args.bo_nganh}'. Các bộ đã biết: {list(ALL_EXCELS)}")
+            raise SystemExit(1)
+    if not selected_excel:
+        selected_excel = EXCEL_FILE
+
+    main(selected_excel)
     reorganize()
     restructure()
     download_pdf()
