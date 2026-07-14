@@ -57,11 +57,13 @@ function getKeyPhrase(text: string): string {
   return line.split(/\s+/).slice(0, 12).join(" ");
 }
 
-// Kết quả tìm kiếm section trong PDF
+// Kết quả tìm kiếm section trong PDF — section có thể trải dài qua nhiều trang
+// (VD "Thành phần hồ sơ" liệt kê nhiều "Trường hợp" trải dài 4-5 trang)
 interface SectionRange {
-  page: number;
+  page: number;          // trang chứa heading bắt đầu
   headingY: number;      // y-coordinate của heading (điểm bắt đầu)
-  nextHeadingY: number;  // y-coordinate của heading tiếp theo (điểm kết thúc), -1 nếu hết trang
+  endPage: number;       // trang chứa heading kế tiếp (ranh giới kết thúc), hoặc trang cuối đã quét nếu không tìm thấy
+  nextHeadingY: number;  // y-coordinate của heading kế tiếp trên endPage, -1 nếu không tìm thấy (hết tài liệu)
   headingStr: string;    // heading text đã match
 }
 
@@ -75,9 +77,6 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
   const [sectionRange, setSectionRange] = useState<SectionRange | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
-  // Lưu set các y-values nằm trong section (để so sánh trực tiếp khi render)
-  const sectionYValues = useRef<Set<number>>(new Set());
-  const headingYValue = useRef<number>(-1);
 
   const headingsToSearch: string[] = sectionTitle && SECTION_HEADINGS[sectionTitle]
     ? SECTION_HEADINGS[sectionTitle]
@@ -121,41 +120,50 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
               // y-coordinate của heading (trong PDF, y tính từ bottom lên)
               const headingY = item.transform[5]; // transform[5] = y position
 
-              // Tìm heading tiếp theo để xác định điểm kết thúc section
+              const findNextHeadingY = (candidateItems: Array<{ str: string; transform: number[] }>, fromIndex: number) => {
+                for (let j = fromIndex; j < candidateItems.length; j++) {
+                  const nextStr = normalizeText(candidateItems[j].str);
+                  const isNextHeading = isAllCapsLine(candidateItems[j].str) && ALL_HEADINGS.some(h => {
+                    const normH = normalizeText(h);
+                    return nextStr.includes(normH) ||
+                      (normH.includes(nextStr) && nextStr.length > 4);
+                  });
+                  if (isNextHeading) return candidateItems[j].transform[5];
+                }
+                return null;
+              };
+
+              // Tìm heading tiếp theo để xác định điểm kết thúc section — section có
+              // thể trải dài qua nhiều trang, nên nếu không thấy trong trang này thì
+              // quét tiếp các trang sau cho tới khi gặp heading khác hoặc hết tài liệu
               let nextHeadingY = -1;
-              for (let j = i + 1; j < items.length; j++) {
-                const nextStr = normalizeText(items[j].str);
-                const isNextHeading = isAllCapsLine(items[j].str) && ALL_HEADINGS.some(h => {
-                  const normH = normalizeText(h);
-                  return nextStr.includes(normH) ||
-                    (normH.includes(nextStr) && nextStr.length > 4);
-                });
-                if (isNextHeading) {
-                  nextHeadingY = items[j].transform[5];
-                  break;
+              let endPage = pageNum;
+              const samePageNextY = findNextHeadingY(items, i + 1);
+              if (samePageNextY !== null) {
+                nextHeadingY = samePageNextY;
+              } else {
+                for (let p = pageNum + 1; p <= total; p++) {
+                  const nextPage = await pdf.getPage(p);
+                  const nextTextContent = await nextPage.getTextContent();
+                  const nextItems = nextTextContent.items as Array<{ str: string; transform: number[] }>;
+                  const y = findNextHeadingY(nextItems, 0);
+                  endPage = p;
+                  if (y !== null) {
+                    nextHeadingY = y;
+                    break;
+                  }
                 }
               }
 
               setSectionRange({
                 page: pageNum,
                 headingY,
+                endPage,
                 nextHeadingY,
                 headingStr: matchedHeading,
               });
               setTargetPage(pageNum);
               setCurrentPage(pageNum);
-              // Lưu các y-values trong vùng section
-              const ySet = new Set<number>();
-              ySet.add(headingY); // Thêm heading
-              headingYValue.current = headingY;
-              for (const item of items) {
-                const y = item.transform[5];
-                const inSection = nextHeadingY === -1
-                  ? y <= headingY
-                  : y <= headingY && y > nextHeadingY;
-                if (inSection) ySet.add(y);
-              }
-              sectionYValues.current = ySet;
               found = true;
               break;
             }
@@ -218,37 +226,42 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
     return () => observer.disconnect();
   }, [numPages, searchDone]);
 
-  // Highlight text renderer — so sánh y trực tiếp với sectionYValues
+  // Highlight text renderer — tô xuyên suốt từ trang heading (sectionRange.page)
+  // tới trang chứa heading kế tiếp (sectionRange.endPage), có thể trải qua nhiều trang
   const customTextRenderer = useCallback(
-    ({ str, pageIndex, itemIndex, transform }: { str: string; pageIndex: number; itemIndex: number; transform: number[] }) => {
+    ({ str, pageIndex, transform }: { str: string; pageIndex: number; itemIndex: number; transform: number[] }) => {
       if (!str || !str.trim()) return str;
-      if (pageIndex + 1 !== targetPage) return str;
+      const pageNum = pageIndex + 1;
 
-      const normalizedStr = normalizeText(str);
+      if (sectionRange && pageNum >= sectionRange.page && pageNum <= sectionRange.endPage) {
+        const y = transform[5];
 
-      if (sectionRange && pageIndex + 1 === sectionRange.page) {
-        // Tô heading — so tọa độ y với heading đã xác định ở bước quét,
-        // không so lại bằng text (dễ khớp nhầm với câu chứa từ "hồ sơ" chung chung)
-        const isHeading = Math.abs(transform[5] - sectionRange.headingY) < 0.5;
-        if (isHeading) {
+        // Tô heading — chỉ trên đúng trang bắt đầu, đúng tọa độ y đã xác định
+        if (pageNum === sectionRange.page && Math.abs(y - sectionRange.headingY) < 0.5) {
           return `<mark style="background: rgba(201,151,60,0.65); border-radius: 3px; padding: 1px 4px; font-weight: 600;">${str}</mark>`;
         }
 
-        // Tô nội dung section — so sánh trực tiếp y-coordinate của item này
-const y = transform[5];
-const { headingY, nextHeadingY } = sectionRange;
-const inSection = nextHeadingY === -1
-  ? y < headingY
-  : y < headingY && y > nextHeadingY;
-if (inSection) {
-  return `<mark style="background: rgba(201,151,60,0.18); border-radius: 2px;">${str}</mark>`;
-}
-      } else {
-        // Fallback: highlight key phrase
-        const words = normalizedPhrase.split(" ").filter(w => w.length > 4);
-        if (words.some(w => normalizedStr.includes(w))) {
-          return `<mark style="background: rgba(201,151,60,0.35); border-radius: 2px;">${str}</mark>`;
+        // Trang bắt đầu: nội dung phải nằm dưới heading. Các trang sau đó: không giới hạn trên.
+        const belowStart = pageNum > sectionRange.page || y < sectionRange.headingY;
+        // Trang kết thúc (có heading kế tiếp): nội dung phải nằm trên heading kế tiếp đó.
+        // Các trang trước đó: không giới hạn dưới.
+        const aboveEnd = pageNum < sectionRange.endPage ||
+          sectionRange.nextHeadingY === -1 ||
+          y > sectionRange.nextHeadingY;
+
+        if (belowStart && aboveEnd) {
+          return `<mark style="background: rgba(201,151,60,0.18); border-radius: 2px;">${str}</mark>`;
         }
+        return str;
+      }
+
+      if (pageNum !== targetPage) return str;
+
+      // Fallback: highlight key phrase (không xác định được section theo heading)
+      const normalizedStr = normalizeText(str);
+      const words = normalizedPhrase.split(" ").filter(w => w.length > 4);
+      if (words.some(w => normalizedStr.includes(w))) {
+        return `<mark style="background: rgba(201,151,60,0.35); border-radius: 2px;">${str}</mark>`;
       }
 
       return str;
