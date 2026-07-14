@@ -100,10 +100,13 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
           for (let i = 0; i < items.length; i++) {
             const item = items[i];
             const normalizedStr = normalizeText(item.str);
-            const matchedHeading = headingsToSearch.find(h =>
-              normalizedStr.includes(normalizeText(h)) ||
-              normalizeText(h).includes(normalizedStr) && normalizedStr.length > 3
-            );
+            // Heading thật là dòng ngắn (chỉ chứa mỗi cụm heading), không phải câu dài
+            // vô tình chứa từ khoá chung chung như "hồ sơ", "kết quả"...
+            const matchedHeading = headingsToSearch.find(h => {
+              const normH = normalizeText(h);
+              return (normalizedStr.length <= normH.length + 15 && normalizedStr.includes(normH)) ||
+                (normH.includes(normalizedStr) && normalizedStr.length > 3);
+            });
 
             if (matchedHeading) {
               // y-coordinate của heading (trong PDF, y tính từ bottom lên)
@@ -113,10 +116,11 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
               let nextHeadingY = -1;
               for (let j = i + 1; j < items.length; j++) {
                 const nextStr = normalizeText(items[j].str);
-                const isNextHeading = ALL_HEADINGS.some(h =>
-                  nextStr.includes(normalizeText(h)) ||
-                  normalizeText(h).includes(nextStr) && nextStr.length > 4
-                );
+                const isNextHeading = ALL_HEADINGS.some(h => {
+                  const normH = normalizeText(h);
+                  return (nextStr.length <= normH.length + 15 && nextStr.includes(normH)) ||
+                    (normH.includes(nextStr) && nextStr.length > 4);
+                });
                 if (isNextHeading) {
                   nextHeadingY = items[j].transform[5];
                   break;
@@ -214,11 +218,9 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
       const normalizedStr = normalizeText(str);
 
       if (sectionRange && pageIndex + 1 === sectionRange.page) {
-        // Tô heading
-        const isHeading = headingsToSearch.some(h =>
-          normalizedStr.includes(normalizeText(h)) ||
-          (normalizeText(h).includes(normalizedStr) && normalizedStr.length > 3)
-        );
+        // Tô heading — so tọa độ y với heading đã xác định ở bước quét,
+        // không so lại bằng text (dễ khớp nhầm với câu chứa từ "hồ sơ" chung chung)
+        const isHeading = Math.abs(transform[5] - sectionRange.headingY) < 0.5;
         if (isHeading) {
           return `<mark style="background: rgba(201,151,60,0.65); border-radius: 3px; padding: 1px 4px; font-weight: 600;">${str}</mark>`;
         }
@@ -242,7 +244,7 @@ if (inSection) {
 
       return str;
     },
-    [targetPage, normalizedPhrase, sectionRange, headingsToSearch]
+    [targetPage, normalizedPhrase, sectionRange]
   );
 
   // Custom page renderer với highlight overlay dựa trên y-coordinate
