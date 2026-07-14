@@ -41,6 +41,13 @@ function normalizeText(text: string): string {
     .replace(/đ/g, "d");
 }
 
+// Heading thật trong mẫu PDF này luôn viết HOA TOÀN BỘ (VD "THÀNH PHẦN HỒ SƠ"),
+// khác với nội dung (kể cả dòng ngắn cuối đoạn do PDF tự xuống dòng, VD "việc nộp hồ sơ.")
+function isAllCapsLine(raw: string): boolean {
+  const trimmed = raw.trim();
+  return trimmed.length > 0 && trimmed === trimmed.toUpperCase() && trimmed !== trimmed.toLowerCase();
+}
+
 function getKeyPhrase(text: string): string {
   const clean = text.replace(/\.\.\.$/g, "").trim();
   const lines = clean.split("\n").map(l => l.trim()).filter(l => l.length > 10);
@@ -100,13 +107,15 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
           for (let i = 0; i < items.length; i++) {
             const item = items[i];
             const normalizedStr = normalizeText(item.str);
-            // Heading thật là dòng ngắn (chỉ chứa mỗi cụm heading), không phải câu dài
-            // vô tình chứa từ khoá chung chung như "hồ sơ", "kết quả"...
-            const matchedHeading = headingsToSearch.find(h => {
-              const normH = normalizeText(h);
-              return (normalizedStr.length <= normH.length + 15 && normalizedStr.includes(normH)) ||
-                (normH.includes(normalizedStr) && normalizedStr.length > 3);
-            });
+            // Chỉ xét các dòng viết HOA toàn bộ — loại nội dung (kể cả dòng ngắn
+            // cuối đoạn) vô tình chứa từ khoá chung chung như "hồ sơ", "kết quả"...
+            const matchedHeading = isAllCapsLine(item.str)
+              ? headingsToSearch.find(h => {
+                  const normH = normalizeText(h);
+                  return normalizedStr.includes(normH) ||
+                    (normH.includes(normalizedStr) && normalizedStr.length > 3);
+                })
+              : undefined;
 
             if (matchedHeading) {
               // y-coordinate của heading (trong PDF, y tính từ bottom lên)
@@ -116,9 +125,9 @@ export default function PdfViewer({ pdfUrl, highlightText, sectionTitle }: PdfVi
               let nextHeadingY = -1;
               for (let j = i + 1; j < items.length; j++) {
                 const nextStr = normalizeText(items[j].str);
-                const isNextHeading = ALL_HEADINGS.some(h => {
+                const isNextHeading = isAllCapsLine(items[j].str) && ALL_HEADINGS.some(h => {
                   const normH = normalizeText(h);
-                  return (nextStr.length <= normH.length + 15 && nextStr.includes(normH)) ||
+                  return nextStr.includes(normH) ||
                     (normH.includes(nextStr) && nextStr.length > 4);
                 });
                 if (isNextHeading) {
