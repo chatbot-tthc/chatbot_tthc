@@ -14,28 +14,37 @@ interface PdfViewerProps {
   sectionTitle?: string;
 }
 
-// Map section key → heading trong PDF
+// Map section key → heading trong PDF. Khớp đúng 7 field thật mà backend dùng
+// khi build index (xem scripts/ingestion/build_index.py: SECTION_FIELDS) — đã
+// xác nhận bằng cách trích xuất trực tiếp text PDF thật của nhiều bộ ngành
+// (bo-tu-phap, bo-cong-an), không đoán mò.
 const SECTION_HEADINGS: Record<string, string[]> = {
-  le_phi:              ["LỆ PHÍ", "PHÍ, LỆ PHÍ", "CÁCH THỨC THỰC HIỆN"],
-  thanh_phan_ho_so:    ["THÀNH PHẦN HỒ SƠ", "HỒ SƠ", "THÀNH PHẦN, SỐ LƯỢNG HỒ SƠ"],
   trinh_tu_thuc_hien:  ["TRÌNH TỰ THỰC HIỆN", "QUY TRÌNH THỰC HIỆN"],
-  thoi_han_giai_quyet: ["THỜI HẠN GIẢI QUYẾT", "THỜI GIAN GIẢI QUYẾT"],
+  cach_thuc_thuc_hien: ["CÁCH THỨC THỰC HIỆN"],
+  thanh_phan_ho_so:    ["THÀNH PHẦN HỒ SƠ", "HỒ SƠ", "THÀNH PHẦN, SỐ LƯỢNG HỒ SƠ"],
   doi_tuong_thuc_hien: ["ĐỐI TƯỢNG THỰC HIỆN"],
-  ket_qua:             ["KẾT QUẢ THỰC HIỆN THỦ TỤC", "KẾT QUẢ"],
+  ket_qua_xu_ly:       ["KẾT QUẢ XỬ LÝ", "KẾT QUẢ THỰC HIỆN THỦ TỤC", "KẾT QUẢ"],
+  can_cu_phap_ly:      ["CĂN CỨ PHÁP LÝ"],
+  yeu_cau_dieu_kien:   ["YÊU CẦU, ĐIỀU KIỆN THỰC HIỆN", "YÊU CẦU ĐIỀU KIỆN"],
 };
 
-// Tất cả heading có thể xuất hiện trong PDF (để xác định điểm kết thúc section)
+// Tất cả heading có thể xuất hiện trong PDF (để xác định điểm kết thúc section) —
+// gồm cả các heading không phải là section được RAG index (VD "CƠ QUAN THỰC HIỆN",
+// "MẪU ĐƠN TỜ KHAI") vì chúng vẫn có thể là ranh giới kết thúc của section đang tô.
 const ALL_HEADINGS = [
   "TRÌNH TỰ THỰC HIỆN", "QUY TRÌNH THỰC HIỆN",
+  "CÁCH THỨC THỰC HIỆN",
   "THÀNH PHẦN HỒ SƠ", "HỒ SƠ", "THÀNH PHẦN, SỐ LƯỢNG HỒ SƠ",
-  "LỆ PHÍ", "PHÍ, LỆ PHÍ", "CÁCH THỨC THỰC HIỆN",
-  "THỜI HẠN GIẢI QUYẾT", "THỜI GIAN GIẢI QUYẾT",
-  "ĐỐI TƯỢNG THỰC HIỆN", "KẾT QUẢ THỰC HIỆN THỦ TỤC", "KẾT QUẢ",
-  "CĂN CỨ PHÁP LÝ", "YÊU CẦU ĐIỀU KIỆN", "MẪU ĐƠN TỜ KHAI",
+  "ĐỐI TƯỢNG THỰC HIỆN",
+  "KẾT QUẢ XỬ LÝ", "KẾT QUẢ THỰC HIỆN THỦ TỤC", "KẾT QUẢ",
+  "CĂN CỨ PHÁP LÝ",
+  "YÊU CẦU, ĐIỀU KIỆN THỰC HIỆN", "YÊU CẦU ĐIỀU KIỆN",
+  "CƠ QUAN THỰC HIỆN", "MẪU ĐƠN TỜ KHAI",
 ];
 
 function normalizeText(text: string): string {
   return text
+    .replace(/[,;:]/g, "") // bỏ dấu câu — heading cùng nghĩa có thể khác nhau giữa các bộ ngành (VD có/không dấu phẩy)
     .replace(/\s+/g, " ").trim().toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d");
