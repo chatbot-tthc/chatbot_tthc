@@ -40,11 +40,11 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     r = await db.execute(text("""
         SELECT rc->>'document_title' AS ten_thu_tuc, COUNT(*) AS cnt
         FROM chat_messages,
-             jsonb_array_elements(retrieved_chunks::jsonb) AS rc
+             jsonb_array_elements(replace(retrieved_chunks::text, chr(92) || 'u0000', '')::jsonb) AS rc
         WHERE role = 'assistant'
           AND is_fallback = FALSE
           AND retrieved_chunks IS NOT NULL
-          AND jsonb_typeof(retrieved_chunks::jsonb) = 'array'
+          AND jsonb_typeof(replace(retrieved_chunks::text, chr(92) || 'u0000', '')::jsonb) = 'array'
         GROUP BY rc->>'document_title'
         ORDER BY cnt DESC
         LIMIT 8
