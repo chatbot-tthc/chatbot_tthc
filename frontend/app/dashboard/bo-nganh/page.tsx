@@ -395,9 +395,6 @@ export default function DashboardBoNganhPage() {
                     onChange={(e) => setNewExcel(e.target.files?.[0] || null)}
                   />
                 </label>
-                <p className="text-[10px] mt-1" style={{ color: "#B8956A" }}>
-                  Tải từ dichvucong.gov.vn — danh sách mã thủ tục ở cột A, từ dòng 3 trở đi.
-                </p>
               </div>
 
               {addError && (
@@ -416,9 +413,6 @@ export default function DashboardBoNganhPage() {
                 {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 {adding ? "Đang thêm..." : "Thêm bộ/ngành"}
               </button>
-              <p className="text-[10px] text-center" style={{ color: "#B8956A" }}>
-                Sau khi thêm, bấm &quot;Cập nhật&quot; trên bảng để bắt đầu crawl dữ liệu.
-              </p>
             </div>
           </div>
         </div>
