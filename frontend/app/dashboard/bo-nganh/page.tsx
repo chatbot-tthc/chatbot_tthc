@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, RefreshCw, AlertTriangle, Building2,
-  CheckCircle2, Loader2, XCircle, DownloadCloud,
+  CheckCircle2, Loader2, XCircle, DownloadCloud, Plus, X, UploadCloud,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -77,6 +77,13 @@ export default function DashboardBoNganhPage() {
   const [crawlingCode, setCrawlingCode] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [addOpen, setAddOpen] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newDisplayName, setNewDisplayName] = useState("");
+  const [newExcel, setNewExcel] = useState<File | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
@@ -142,6 +149,40 @@ export default function DashboardBoNganhPage() {
     }
   };
 
+  const resetAddForm = () => {
+    setNewCode("");
+    setNewDisplayName("");
+    setNewExcel(null);
+    setAddError(null);
+  };
+
+  const handleAddAgency = async () => {
+    if (!newCode.trim() || !newDisplayName.trim() || !newExcel) {
+      setAddError("Vui lòng nhập đầy đủ mã, tên hiển thị và chọn file Excel.");
+      return;
+    }
+    setAdding(true);
+    setAddError(null);
+    try {
+      const formData = new FormData();
+      formData.append("code", newCode.trim());
+      formData.append("display_name", newDisplayName.trim());
+      formData.append("excel", newExcel);
+      const r = await fetch(`${API_URL}/api/v1/agencies`, { method: "POST", body: formData });
+      if (!r.ok) {
+        const body = await r.json().catch(() => null);
+        throw new Error(body?.detail || `Lỗi ${r.status}`);
+      }
+      setAddOpen(false);
+      resetAddForm();
+      await fetchData();
+    } catch (e: unknown) {
+      setAddError(e instanceof Error ? e.message : "Không thể thêm bộ/ngành mới.");
+    } finally {
+      setAdding(false);
+    }
+  };
+
   const totalThuTuc = agencies.reduce((s, a) => s + a.thu_tuc_count, 0);
   const activeCount = agencies.filter(a => a.is_active).length;
 
@@ -172,6 +213,12 @@ export default function DashboardBoNganhPage() {
               Cập nhật: {lastUpdated}
             </span>
           )}
+          <button onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-xl transition-all hover:bg-white/15"
+            style={{ background: "rgba(255,255,255,0.12)", color: "#E8C06A" }}>
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Thêm bộ/ngành</span>
+          </button>
           <button onClick={() => fetchData()} disabled={loading}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/15 disabled:opacity-50"
             style={{ background: "rgba(255,255,255,0.12)" }}>
@@ -288,6 +335,94 @@ export default function DashboardBoNganhPage() {
           </>
         )}
       </main>
+
+      {addOpen && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-md px-4"
+          onClick={() => { if (!adding) { setAddOpen(false); resetAddForm(); } }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-base flex items-center gap-2" style={{ color: "#7B1818" }}>
+                <Building2 className="w-5 h-5" />
+                Thêm bộ/ngành mới
+              </h3>
+              <button
+                onClick={() => { if (!adding) { setAddOpen(false); resetAddForm(); } }}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-semibold mb-1" style={{ color: "#7B1818" }}>Mã bộ/ngành</label>
+                <input
+                  type="text"
+                  value={newCode}
+                  onChange={(e) => setNewCode(e.target.value)}
+                  placeholder="vd: toa-an-nhan-dan"
+                  className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2"
+                  style={{ color: "#3D1A0E" }}
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold mb-1" style={{ color: "#7B1818" }}>Tên hiển thị</label>
+                <input
+                  type="text"
+                  value={newDisplayName}
+                  onChange={(e) => setNewDisplayName(e.target.value)}
+                  placeholder="vd: Tòa án nhân dân"
+                  className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2"
+                  style={{ color: "#3D1A0E" }}
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold mb-1" style={{ color: "#7B1818" }}>
+                  File Excel danh sách mã thủ tục (.xlsx)
+                </label>
+                <label
+                  className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl border border-dashed cursor-pointer hover:bg-gray-50"
+                  style={{ borderColor: "#E8C06A", color: newExcel ? "#3D1A0E" : "#B8956A" }}
+                >
+                  <UploadCloud className="w-4 h-4 shrink-0" />
+                  {newExcel ? newExcel.name : "Chọn file..."}
+                  <input
+                    type="file"
+                    accept=".xlsx"
+                    className="hidden"
+                    onChange={(e) => setNewExcel(e.target.files?.[0] || null)}
+                  />
+                </label>
+                <p className="text-[10px] mt-1" style={{ color: "#B8956A" }}>
+                  Tải từ dichvucong.gov.vn — danh sách mã thủ tục ở cột A, từ dòng 3 trở đi.
+                </p>
+              </div>
+
+              {addError && (
+                <div className="rounded-xl px-3 py-2 text-xs flex items-center gap-2"
+                  style={{ background: "rgba(255,248,240,0.95)", border: "1px solid #E8C06A", color: "#7B1818" }}>
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />{addError}
+                </div>
+              )}
+
+              <button
+                onClick={handleAddAgency}
+                disabled={adding}
+                className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all hover:opacity-90 disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,#7B1818,#9B2020)", color: "white" }}
+              >
+                {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {adding ? "Đang thêm..." : "Thêm bộ/ngành"}
+              </button>
+              <p className="text-[10px] text-center" style={{ color: "#B8956A" }}>
+                Sau khi thêm, bấm &quot;Cập nhật&quot; trên bảng để bắt đầu crawl dữ liệu.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

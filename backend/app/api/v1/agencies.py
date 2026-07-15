@@ -1,11 +1,15 @@
 """
-Module Quản lý Dữ liệu Bộ/Ngành — xem danh sách, bật/tắt, và trigger crawl/cập nhật.
+Module Quản lý Dữ liệu Bộ/Ngành — xem danh sách, bật/tắt, thêm bộ/ngành mới,
+và trigger crawl/cập nhật.
 """
+import re
 import subprocess
 import sys
+from io import BytesIO
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import openpyxl
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +23,9 @@ router = APIRouter()
 # /app/scripts/ingestion/run_crawl_job.py trong container (xem volume "./scripts:/app/scripts" ở docker-compose.yml)
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 RUN_CRAWL_JOB_SCRIPT = BACKEND_ROOT / "scripts" / "ingestion" / "run_crawl_job.py"
+# Excel do người dùng upload khi thêm bộ/ngành mới — crawl_tthc.py tự quét thư mục này
+EXCELS_DIR = BACKEND_ROOT / "scripts" / "crawler" / "data" / "excels"
+CODE_PATTERN = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 
 
 async def _get_agency_or_404(code: str, db: AsyncSession) -> Agency:
@@ -34,6 +41,67 @@ async def list_agencies(db: AsyncSession = Depends(get_db)):
     """Danh sách bộ/ngành + số thủ tục + trạng thái bật/tắt/crawl."""
     result = await db.execute(select(Agency).order_by(Agency.display_name))
     return result.scalars().all()
+
+
+@router.post("", response_model=AgencyResponse, status_code=status.HTTP_201_CREATED, tags=["Agencies"])
+async def create_agency(
+    code: str = Form(...),
+    display_name: str = Form(...),
+    excel: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Đăng ký 1 bộ/ngành hoàn toàn mới, kèm file Excel danh sách mã thủ tục.
+    Không tự động crawl — dùng nút "Cập nhật" (POST /{code}/crawl) sau khi tạo.
+    """
+    code = code.strip().lower()
+    if not CODE_PATTERN.fullmatch(code):
+        raise HTTPException(
+            status_code=400,
+            detail="Mã bộ/ngành chỉ được chứa chữ thường, số và dấu gạch ngang (VD: toa-an-nhan-dan).",
+        )
+
+    existing = await db.execute(select(Agency).where(Agency.code == code))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail=f"Bộ/ngành '{code}' đã tồn tại.")
+
+    if not excel.filename.endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="Chỉ chấp nhận file Excel (.xlsx).")
+
+    content = await excel.read()
+    try:
+        wb = openpyxl.load_workbook(BytesIO(content))
+        ws = wb.active
+        ma_thu_tuc_codes = [
+            str(row[0]).strip()
+            for row in ws.iter_rows(min_row=3, values_only=True)
+            if row and row[0]
+        ]
+    except Exception:
+        raise HTTPException(status_code=400, detail="File Excel không đọc được hoặc sai định dạng.")
+
+    if not ma_thu_tuc_codes:
+        raise HTTPException(
+            status_code=400,
+            detail="Không tìm thấy mã thủ tục nào trong file (cần dữ liệu ở cột A, từ dòng 3 trở đi).",
+        )
+
+    EXCELS_DIR.mkdir(parents=True, exist_ok=True)
+    (EXCELS_DIR / f"{code}.xlsx").write_bytes(content)
+
+    agency = Agency(
+        code=code,
+        display_name=display_name.strip(),
+        is_active=True,
+        crawl_status="idle",
+        thu_tuc_count=0,
+        source_excel=f"data/excels/{code}.xlsx",
+    )
+    db.add(agency)
+    await db.flush()
+    await db.refresh(agency)
+    invalidate_agency_cache()
+    return agency
 
 
 @router.patch("/{code}/toggle", response_model=AgencyResponse, tags=["Agencies"])

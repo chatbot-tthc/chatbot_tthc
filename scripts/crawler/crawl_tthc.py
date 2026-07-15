@@ -17,8 +17,8 @@ SEARCH_URL    = "https://dichvucong.gov.vn/thu-tuc-hanh-chinh"
 DELAY         = 2.0
 RESTART_EVERY = 30
 
-# Excel của tất cả bộ đã crawl (để reorganize phân loại đúng)
-ALL_EXCELS = {
+# Excel của các bộ đã crawl từ trước (để reorganize phân loại đúng)
+_LEGACY_EXCELS = {
     "bo-cong-an":         "danh-sach-tthc-BoCongAn.xlsx",
     "bo-tu-phap":         "danh-sach-tthc-BoTuPhap.xlsx",
     "ngan-hang-nha-nuoc": "danh-sach-tthc-NganhangNhanuocVietNam.xlsx",
@@ -26,6 +26,20 @@ ALL_EXCELS = {
     "bo-xay-dung":        "danh-sach-tthc-BoXayDung.xlsx",
     "bo-nong-nghiep-mt":  "danh-sach-tthc-NongNghiepvaMoiTruong.xlsx",
 }
+# Bộ/ngành mới đăng ký qua Dashboard (POST /api/v1/agencies) — Excel được lưu vào
+# data/excels/<code>.xlsx, tự phát hiện ở đây nên không cần sửa code khi thêm bộ mới.
+EXCELS_DIR = Path(__file__).resolve().parent / "data" / "excels"
+
+
+def _discover_all_excels() -> dict:
+    merged = dict(_LEGACY_EXCELS)
+    if EXCELS_DIR.exists():
+        for f in sorted(EXCELS_DIR.glob("*.xlsx")):
+            merged.setdefault(f.stem, str(f))
+    return merged
+
+
+ALL_EXCELS = _discover_all_excels()
 
 PDF_BASE    = "data/pdf"
 PDF_API_URL = "https://dichvucong.gov.vn/api/v1/configuring/formality/export-pdf-formality-detail-by-citizen"
