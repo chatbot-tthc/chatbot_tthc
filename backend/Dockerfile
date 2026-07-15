@@ -10,11 +10,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Tránh việc container phải tải ~1.1GB qua mạng mỗi lần khởi động (dễ bị treo
 # nếu mạng VM chập chờn) — cache HuggingFace nằm trong lớp ghi của container,
 # nên mất sạch mỗi khi container bị tạo lại (rebuild/recreate).
-# HF_HUB_ENABLE_HF_TRANSFER bật tải đa luồng bằng hf_transfer (thư viện Rust
-# chính chủ HuggingFace) — nhanh và ổn định hơn nhiều so với tải 1 luồng mặc
-# định, đã test thực tế tải xong model trong ~26s. HF_HUB_DOWNLOAD_TIMEOUT vẫn
-# giữ lại làm lưới an toàn — nếu mạng treo giữa chừng, lỗi sau 60s thay vì đứng
-# mãi, và vòng lặp bên dưới tự thử lại tối đa 5 lần.
+# HF_HUB_DISABLE_XET=1: tắt hẳn backend tải mới "Xet" của HuggingFace — đây là
+# nguyên nhân thực sự gây treo (đã xác minh: domain CDN của Xet vẫn kết nối
+# nhanh bình thường, nhưng bản thân giao thức Xet bị treo khi tải file thật).
+# Tắt Xet sẽ ép dùng đường tải truyền thống, kết hợp hf_transfer (đa luồng,
+# nhanh hơn tải 1 luồng mặc định) — đã test thực tế tải xong model trong ~36s
+# khi tắt Xet. HF_HUB_DOWNLOAD_TIMEOUT vẫn giữ làm lưới an toàn — nếu mạng
+# treo giữa chừng, lỗi sau 60s thay vì đứng mãi, vòng lặp bên dưới tự thử lại
+# tối đa 5 lần.
+ENV HF_HUB_DISABLE_XET=1
 ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV HF_HUB_DOWNLOAD_TIMEOUT=60
 RUN success=0; \
