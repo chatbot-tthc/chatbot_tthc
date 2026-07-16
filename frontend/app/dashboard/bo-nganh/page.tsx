@@ -7,7 +7,9 @@ import {
   CheckCircle2, Loader2, XCircle, DownloadCloud, Plus, X, UploadCloud,
 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Gọi qua proxy same-origin (xem rewrites() trong next.config.ts) để tránh
+// trình duyệt chặn mixed content (HTTPS trang -> HTTP backend).
+const API_URL = "";
 
 interface Agency {
   id: string;
