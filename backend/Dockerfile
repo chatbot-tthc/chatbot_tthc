@@ -5,6 +5,12 @@ WORKDIR /app
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Gỡ hẳn hf_xet — HF_HUB_DISABLE_XET=1 (bên dưới) không còn được huggingface_hub
+# bản mới tôn trọng đầy đủ, khiến quá trình tải vẫn cố khởi tạo Xet và treo vô
+# thời hạn (đã xác minh: raw HTTP/CDN qua curl vẫn tải nhanh bình thường, chỉ
+# riêng đường Xet trong Python bị treo). Gỡ thẳng package để không còn đường
+# nào khác ngoài HTTP truyền thống.
+RUN pip uninstall -y hf_xet || true
 
 # Tải sẵn model embedding + reranker NGAY LÚC BUILD, bake vào image.
 # Tránh việc container phải tải ~1.1GB qua mạng mỗi lần khởi động (dễ bị treo
@@ -23,8 +29,8 @@ ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV HF_HUB_DOWNLOAD_TIMEOUT=60
 RUN success=0; \
     for i in 1 2 3 4 5; do \
-      python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('intfloat/multilingual-e5-base'); CrossEncoder('BAAI/bge-reranker-base', max_length=512)" && { success=1; break; }; \
-      echo "[Lần $i] Tải model thất bại, đợi 5s rồi thử lại..."; \
+      timeout 300 python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('intfloat/multilingual-e5-base'); CrossEncoder('BAAI/bge-reranker-base', max_length=512)" && { success=1; break; }; \
+      echo "[Lần $i] Tải model thất bại hoặc treo quá 300s, đợi 5s rồi thử lại (mạng đang chậm, lần thử sau sẽ resume tiếp)..."; \
       sleep 5; \
     done; \
     [ "$success" = "1" ] || { echo "LỖI: tải model thất bại sau 5 lần thử"; exit 1; }
