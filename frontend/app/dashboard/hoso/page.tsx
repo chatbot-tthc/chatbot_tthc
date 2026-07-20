@@ -354,7 +354,7 @@ export default function DashboardHosoPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [selectedCoQuan, setSelectedCoQuan] = useState("lai-thieu");
+  const [selectedCoQuan, setSelectedCoQuan] = useState("phuong-lai-thieu");
   const [coQuanList, setCoQuanList] = useState<CoQuan[]>([
     { value: "lai-thieu", label: "Phường Lái Thiêu", thang: "06/2026" },
   ]);
@@ -444,15 +444,16 @@ export default function DashboardHosoPage() {
           <select value={selectedCoQuan} onChange={e => setSelectedCoQuan(e.target.value)}
             className="flex-1 max-w-xs px-3 py-2 rounded-xl text-sm outline-none transition-all"
             style={{ background: "#FDF5E6", border: "1.5px solid #E8C06A", color: "#3D1A0E" }}>
-            {coQuanList.map(c => (
+            {coQuanList.filter(c => c.value !== "lai-thieu").map(c => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
           <span className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: "#7B1818" }}>Thời gian:</span>
-          <div className="px-3 py-2 rounded-xl text-sm shrink-0"
-            style={{ background: "#F5F5F5", border: "1.5px solid #DDD", color: "#5A3A1A" }}>
-            06/2026
-          </div>
+          <select value="06/2026" onChange={() => {}}
+            className="px-3 py-2 rounded-xl text-sm outline-none transition-all shrink-0"
+            style={{ background: "#FDF5E6", border: "1.5px solid #E8C06A", color: "#3D1A0E" }}>
+            <option value="06/2026">06/2026</option>
+          </select>
         </div>
 
         {loading && !hoso && (
