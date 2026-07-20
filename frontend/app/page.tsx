@@ -299,7 +299,6 @@ function ChunkModal({ chunk, onClose }: { chunk: RetrievedChunk; onClose: () => 
 
 function ChunkChip({ chunk }: { chunk: RetrievedChunk }) {
   const [open, setOpen] = useState(false);
-  const scorePercent = Math.round(chunk.score * 100);
 
   return (
     <>
@@ -317,9 +316,6 @@ function ChunkChip({ chunk }: { chunk: RetrievedChunk }) {
         <FileText className="w-3 h-3 opacity-60 shrink-0" />
         <span className="truncate max-w-[160px]">
           {chunk.document_title || chunk.ma_thu_tuc}
-        </span>
-        <span className="shrink-0 font-semibold" style={{ color: "#C9973C" }}>
-          · {scorePercent}%
         </span>
       </button>
 
