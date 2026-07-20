@@ -445,9 +445,14 @@ export default function DashboardHosoPage() {
             className="flex-1 max-w-xs px-3 py-2 rounded-xl text-sm outline-none transition-all"
             style={{ background: "#FDF5E6", border: "1.5px solid #E8C06A", color: "#3D1A0E" }}>
             {coQuanList.map(c => (
-              <option key={c.value} value={c.value}>{c.label}{c.thang ? ` — ${c.thang}` : ""}</option>
+              <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
+          <span className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: "#7B1818" }}>Thời gian:</span>
+          <div className="px-3 py-2 rounded-xl text-sm shrink-0"
+            style={{ background: "#F5F5F5", border: "1.5px solid #DDD", color: "#5A3A1A" }}>
+            06/2026
+          </div>
         </div>
 
         {loading && !hoso && (
