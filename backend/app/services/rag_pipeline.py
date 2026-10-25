@@ -13,12 +13,15 @@ from app.services.agency_filter import get_active_agency_codes
 import math
 from google import genai
 
-# Khởi tạo client Vertex AI
-client = genai.Client(
-    vertexai=True,
-    project=settings.GCP_PROJECT,
-    location=settings.GCP_LOCATION,
-)
+# Khởi tạo client Gemini: ưu tiên API key (chạy local), không có key thì dùng Vertex AI
+if settings.GEMINI_API_KEY:
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+else:
+    client = genai.Client(
+        vertexai=True,
+        project=settings.GCP_PROJECT,
+        location=settings.GCP_LOCATION,
+    )
 
 embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
 reranker_model = CrossEncoder(settings.RERANKER_MODEL, max_length=512)
