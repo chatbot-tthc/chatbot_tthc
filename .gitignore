@@ -44,3 +44,6 @@ chroma_data/
 # Logs
 *.log
 logs/
+
+# Cache text trích từ PDF (sinh tự động lúc chạy)
+data/pdf_text_cache/

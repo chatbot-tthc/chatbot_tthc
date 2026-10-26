@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     # Dữ liệu PDF gốc (dùng bổ sung citation - A3.4)
     PDF_DIR: str = "/app/pdf_data"
     PDF_MAX_CHARS: int = 8000
+    # Số luồng CPU cho torch (embedding + reranker). Mặc định torch dùng số lõi vật lý (2);
+    # đo thực tế trên máy 2 lõi/4 luồng: 3 luồng nhanh hơn ~1.7x, kết quả xếp hạng giữ nguyên
+    TORCH_NUM_THREADS: int = 3
+    # Cache text đã trích từ PDF (pdfplumber chậm ~2-3s/file) để các lần hỏi sau đọc tức thì
+    PDF_TEXT_CACHE_DIR: str = "/app/data/pdf_text_cache"
 
     class Config:
         env_file = ".env"

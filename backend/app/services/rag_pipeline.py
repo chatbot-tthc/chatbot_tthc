@@ -4,8 +4,14 @@ Luồng: Embed → Retrieve (ChromaDB) → Reranker → Fallback Handler → Gem
 Sử dụng Vertex AI với google-genai SDK
 """
 
+import logging
+import time
+from contextlib import contextmanager
+from functools import lru_cache
+
 import chromadb
 import pdfplumber
+import torch
 from pathlib import Path
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.core.config import settings
@@ -23,8 +29,15 @@ else:
         location=settings.GCP_LOCATION,
     )
 
+torch.set_num_threads(settings.TORCH_NUM_THREADS)
+
 embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
 reranker_model = CrossEncoder(settings.RERANKER_MODEL, max_length=512)
+
+# Chạy thử 1 lần khi khởi động: lần suy luận đầu tiên rất chậm (khởi tạo kernel), làm trước
+# để câu hỏi đầu tiên của người dùng không phải chờ cả phút.
+embedding_model.encode("query: khởi động", normalize_embeddings=True)
+reranker_model.predict([["khởi động", "khởi động"]])
 
 PDF_DIR = Path(settings.PDF_DIR)
 
@@ -52,6 +65,53 @@ LƯU Ý: Phần "TÀI LIỆU PDF GỐC" là nguồn chính thức nhất."""
 # Từ khóa detect intent
 _NOP_KW = ["nộp hồ sơ", "nộp đơn", "đăng ký", "xin cấp", "làm thủ tục", "thực hiện thủ tục"]
 _TRA_KW = ["tra cứu", "kiểm tra tiến độ", "xem kết quả", "hồ sơ của tôi", "tình trạng hồ sơ"]
+
+
+logger = logging.getLogger("uvicorn.error")
+
+
+class _Timings(dict):
+    """Cộng dồn thời gian (ms) theo từng bước của pipeline để log/đo độ trễ."""
+
+    @contextmanager
+    def step(self, name: str):
+        t0 = time.perf_counter()
+        try:
+            yield
+        finally:
+            self[name] = self.get(name, 0.0) + (time.perf_counter() - t0) * 1000
+
+
+@lru_cache(maxsize=512)
+def _read_pdf_text(pdf_path: str, max_chars: int) -> str:
+    """Trích text PDF bằng pdfplumber (kết quả không đổi so với trước), có 2 tầng cache:
+    RAM (lru_cache) và đĩa (PDF_TEXT_CACHE_DIR) — vì pdfplumber chậm ~2-3s/file."""
+    src = Path(pdf_path)
+    cache_file = Path(settings.PDF_TEXT_CACHE_DIR) / src.parent.name / f"{src.stem}.{max_chars}.txt"
+    try:
+        if cache_file.exists() and cache_file.stat().st_mtime >= src.stat().st_mtime:
+            return cache_file.read_text(encoding="utf-8")
+    except OSError:
+        pass
+
+    try:
+        text_parts = []
+        with pdfplumber.open(src) as pdf:
+            for page in pdf.pages:
+                text_parts.append(page.extract_text() or "")
+                if len("\n".join(text_parts).lstrip()) >= max_chars:
+                    break
+        text = "\n".join(text_parts).strip()[:max_chars]
+    except Exception as e:
+        print(f"Lỗi đọc PDF {pdf_path}: {e}")
+        return ""
+
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        cache_file.write_text(text, encoding="utf-8")
+    except OSError:
+        pass
+    return text
 
 
 def _sigmoid(x: float) -> float:
@@ -151,24 +211,28 @@ Truy vấn:"""
         except Exception:
             return question  # Fallback về câu gốc nếu lỗi
 
-    async def _retrieve(self, question: str):
+    async def _retrieve(self, question: str, timings: "_Timings | None" = None):
+        timings = timings if timings is not None else _Timings()
         collection = self._get_collection()
         queries = _expand_query(question)
 
         # Chỉ tìm trong các bộ/ngành đang bật (module Quản lý Dữ liệu Bộ/Ngành).
         # None nghĩa là chưa cấu hình gì (bảng agencies trống) -> không lọc gì cả.
-        active_codes = await get_active_agency_codes()
+        with timings.step("agency_filter"):
+            active_codes = await get_active_agency_codes()
         where_filter = {"bo_nganh": {"$in": active_codes}} if active_codes is not None else None
 
         seen_contents = {}
         for q in queries:
-            q_embedding = self._embed_query(q)
-            results = collection.query(
-                query_embeddings=[q_embedding],
-                n_results=settings.RETRIEVAL_TOP_K,
-                include=["documents", "metadatas", "distances"],
-                where=where_filter,
-            )
+            with timings.step("embed_query"):
+                q_embedding = self._embed_query(q)
+            with timings.step("chroma_query"):
+                results = collection.query(
+                    query_embeddings=[q_embedding],
+                    n_results=settings.RETRIEVAL_TOP_K,
+                    include=["documents", "metadatas", "distances"],
+                    where=where_filter,
+                )
             docs = results["documents"][0] if results["documents"] else []
             dists = results["distances"][0] if results["distances"] else []
             metas = results["metadatas"][0] if results["metadatas"] else []
@@ -208,16 +272,7 @@ Truy vấn:"""
         pdf_path = PDF_DIR / bo_nganh / f"{ma_thu_tuc}.pdf"
         if not pdf_path.exists():
             return ""
-        try:
-            text_parts = []
-            with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:
-                    text_parts.append(page.extract_text() or "")
-            full_text = "\n".join(text_parts).strip()
-            return full_text[:settings.PDF_MAX_CHARS]
-        except Exception as e:
-            print(f"Lỗi đọc PDF {pdf_path}: {e}")
-            return ""
+        return _read_pdf_text(str(pdf_path), settings.PDF_MAX_CHARS)
 
     def _check_fallback(self, distances: list[float]) -> bool:
         if not distances:
@@ -246,9 +301,13 @@ Truy vấn:"""
 === TRẢ LỜI ==="""
 
     async def query(self, question: str) -> dict:
+        timings = _Timings()
+        t_total = time.perf_counter()
         # Rewrite query để cải thiện retrieval accuracy
-        rewritten_question = await self._rewrite_query(question)
-        chunks, distances, metadatas = await self._retrieve(rewritten_question)
+        with timings.step("rewrite_llm"):
+            rewritten_question = await self._rewrite_query(question)
+        with timings.step("retrieve_total"):
+            chunks, distances, metadatas = await self._retrieve(rewritten_question, timings)
 
         if self._check_fallback(distances):
             return {
@@ -260,28 +319,31 @@ Truy vấn:"""
                 "action_buttons": [],
             }
 
-        reranked = self._rerank(rewritten_question, chunks)
+        with timings.step("rerank"):
+            reranked = self._rerank(rewritten_question, chunks)
         top_chunks = [c for c, _, _ in reranked]
 
         pdf_docs = []
         seen_ma = set()
-        for _, _, orig_idx in reranked:
-            meta = metadatas[orig_idx] if orig_idx < len(metadatas) else {}
-            ma = meta.get("ma_thu_tuc", "")
-            bo_nganh = meta.get("bo_nganh", "")
-            ten = meta.get("ten_thu_tuc", "")
-            if ma and ma not in seen_ma:
-                seen_ma.add(ma)
-                pdf_text = self._extract_pdf_text(ma, bo_nganh)
-                if pdf_text:
-                    pdf_docs.append({"ten_thu_tuc": ten, "text": pdf_text})
+        with timings.step("pdf_for_prompt"):
+            for _, _, orig_idx in reranked:
+                meta = metadatas[orig_idx] if orig_idx < len(metadatas) else {}
+                ma = meta.get("ma_thu_tuc", "")
+                bo_nganh = meta.get("bo_nganh", "")
+                ten = meta.get("ten_thu_tuc", "")
+                if ma and ma not in seen_ma:
+                    seen_ma.add(ma)
+                    pdf_text = self._extract_pdf_text(ma, bo_nganh)
+                    if pdf_text:
+                        pdf_docs.append({"ten_thu_tuc": ten, "text": pdf_text})
 
         prompt = self._build_prompt(question, top_chunks, pdf_docs)
 
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-        )
+        with timings.step("llm_answer"):
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+            )
         answer = response.text
 
         retrieved_chunks = []
@@ -290,7 +352,8 @@ Truy vấn:"""
             norm_score = round(_sigmoid(ce_score), 3)
             ma = meta.get("ma_thu_tuc", "")
             bo_nganh = meta.get("bo_nganh", "")
-            pdf_text = self._extract_pdf_text(ma, bo_nganh) if ma else ""
+            with timings.step("pdf_for_response"):
+                pdf_text = self._extract_pdf_text(ma, bo_nganh) if ma else ""
             retrieved_chunks.append({
                 "content": chunk[:300] + "..." if len(chunk) > 300 else chunk,
                 "document_title": meta.get("ten_thu_tuc", ""),
@@ -303,6 +366,9 @@ Truy vấn:"""
             })
 
         action_buttons = _detect_action_buttons(question, answer)
+
+        timings["TOTAL"] = (time.perf_counter() - t_total) * 1000
+        logger.info("[timing ms] " + ", ".join(f"{k}={v:.0f}" for k, v in timings.items()))
 
         return {
             "answer": answer,
